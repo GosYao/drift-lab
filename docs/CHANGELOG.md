@@ -3,6 +3,34 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.5.0 — 2026-10-30
+
+Sanitized attribute paths and the read-only live collector.
+
+### Added
+
+- `python -m drift_lab collect`: read-only live collector mapping IAM inline
+  policies, EKS Pod Identity associations, and the preview Deployment onto the
+  engine schema (mode `sanitized-observation`). Injectable CLI runner, fail-closed
+  mapping (grants, roles, or service accounts outside the read-only model become
+  `incomplete`, never a guess), sanitized snapshots (no ARNs, account IDs, or
+  policy statements; images normalized to repository@digest), and machine-readable
+  exit codes (0 clean/complete, 2 review required, 3 inconclusive/incomplete).
+  `--baseline` compares a fresh collection against an approved snapshot. Verified
+  live against the ca-central-1 lab: complete collection, clean comparison.
+- `configs/collector.json`: committed lab topology (non-secret names only).
+- `refresh_only_verdict`: classifies refresh-only exit codes against the sanitized
+  summary, so output-only changes (exit 2) are not drift.
+
+### Changed
+
+- Plan sanitizer (schema v2): changed-attribute paths exported as names only
+  (non-identifier segments hashed), `resource_version`/`generation` and
+  null-versus-empty noise rows dropped, the `aws_iam_role.inline_policy` mirror of
+  a changed `aws_iam_role_policy` for the same role collapsed, and output changes
+  counted without values.
+- 25 new tests (75 total).
+
 ## 0.4.0 — 2026-10-30
 
 Live drift exercise.

@@ -19,7 +19,11 @@ and what is not. Cloud steps are authorization-gated and documented in
 - A small evidence-backed graph: repository -> Deployment -> ServiceAccount ->
   pod identity -> IAM role -> dataset.
 - A Terraform plan sanitizer: raw state and plans never reach reports or a model;
-  only hashed addresses, resource types, and change actions survive.
+  only hashed addresses, resource types, change actions, and changed-attribute
+  names survive.
+- A read-only live collector (`python -m drift_lab collect`): IAM, Pod Identity,
+  and Kubernetes reads mapped onto the same sanitized schema, failing closed on
+  anything outside the read-only model (verified live; see `docs/RUNBOOK.md`).
 - A local preview UI with the graph, findings, a written brief, scenario replay,
   and JSON export.
 - Three Terraform stacks (foundation, EKS lab, workloads) with an explicit security
@@ -44,8 +48,9 @@ if you want the exact versions this prototype was validated with.
 
 | Path | Purpose |
 | ---- | ------- |
-| `drift_lab/` | Local engine: scenarios, comparison, plan sanitizer, server, UI |
-| `tests/` | `unittest` suite (engine, sanitizer, server) |
+| `drift_lab/` | Local engine: scenarios, comparison, plan sanitizer, collector, server, UI |
+| `tests/` | `unittest` suite (engine, sanitizer, collector, server) |
+| `configs/` | Lab topology for the live collector (non-secret names only) |
 | `scripts/` | Preflight, repository contract checks, pinned-tool bootstrap |
 | `infra/foundation` | State bucket, ECR, GitHub OIDC observer role, budget |
 | `infra/eks-lab` | VPC, private-endpoint EKS cluster, managed node group |

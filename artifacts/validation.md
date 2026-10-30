@@ -20,7 +20,9 @@ Address fingerprints are the `import-plan` sanitizer's SHA-256 prefixes.
    `python -m drift_lab import-plan`.
 4. Cross-check: live IAM, Pod Identity, and Deployment reads were mapped onto the
    engine schema (mode `sanitized-observation`) and compared with the approved
-   revision. This was a one-off script, not a committed collector.
+   revision. This was a one-off script at the time; it is now committed as
+   `python -m drift_lab collect` (0.5.0), which re-verified the lab live with a
+   complete collection and a clean baseline comparison.
 5. Reconciliation (user-approved): applied the normal plan, then re-planned.
 
 ## Results
@@ -40,14 +42,13 @@ Address fingerprints are the `import-plan` sanitizer's SHA-256 prefixes.
 
 - Both approved drift scenarios were detected from live evidence by Terraform and by
   the rules engine, with agreeing results.
-- **The sanitizer can't separate noise from drift.** It exports only type and
-  action, so the noise rows look identical to real drift. Next: export
-  changed-attribute paths (names only) and ignore `resource_version` and
-  null-versus-empty changes.
+- **The sanitizer couldn't separate noise from drift.** It exported only type and
+  action, so the noise rows looked identical to real drift. Addressed in 0.5.0:
+  changed-attribute paths (names only), noise filters, and the IAM mirror collapse.
 - **Exit code 2 isn't proof of resource drift.** A refresh-only plan also exits 2
   for output-value changes alone.
-- **IAM drift appears twice:** on `aws_iam_role_policy` and on the parent
-  `aws_iam_role` (its `inline_policy` mirror). Collapse those into one finding.
+- **IAM drift appeared twice:** on `aws_iam_role_policy` and on the parent
+  `aws_iam_role` (its `inline_policy` mirror). Addressed in 0.5.0 (mirror collapse).
 - **Fixture/IaC mismatch:** the fixture range was 2-4 but the IaC deploys 1
   replica. The range is now 1-4.
 - Limitation: the pod's egress is blocked by default-deny, so the reachable path is

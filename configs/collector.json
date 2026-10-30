@@ -1,0 +1,32 @@
+{
+  "environment": "eks-security-lab",
+  "region": "ca-central-1",
+  "cluster_name": "drift-lab",
+  "namespace": "drift-lab",
+  "approved_revision": "GosYao/drift-lab@87f37a8",
+  "deployment": {"id": "deployment:support", "name": "support-agent"},
+  "agent_tool": {
+    "id": "tool:lookup",
+    "name": "lookup_order",
+    "workload": "deployment:support",
+    "source": "sample-app/tools.py:lookup_order"
+  },
+  "service_accounts": [
+    {"id": "sa:support", "name": "support-agent"},
+    {"id": "sa:reporting", "name": "reporting-agent"}
+  ],
+  "roles": [
+    {"id": "role:support", "name": "support-agent", "display": "support-reader",
+     "policy_name": "synthetic-dataset-reader"},
+    {"id": "role:reporting", "name": "reporting-agent", "display": "reporting-reader",
+     "policy_name": "synthetic-dataset-reader"}
+  ],
+  "tables": [
+    {"id": "table:orders", "name": "customer-orders",
+     "classification": "synthetic", "tenant": "customer-a"},
+    {"id": "table:archive", "name": "customer-archive",
+     "classification": "synthetic", "tenant": "customer-b"}
+  ],
+  "read_actions": ["dynamodb:GetItem", "dynamodb:Query"],
+  "policy": {"approved_replica_range": [1, 4]}
+}

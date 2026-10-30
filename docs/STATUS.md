@@ -33,6 +33,12 @@ injected out-of-band, detected by `plan -refresh-only`, the normal plan, and the
 rules engine, then reconciled with approval. The re-plan was clean. See
 `artifacts/validation.md`.
 
+Live collector (2026-10-30): `python -m drift_lab collect` (read-only) was
+verified against the lab: complete collection of all eight tracked resources and a
+clean baseline comparison (exit 0). The sanitizer now exports changed-attribute
+names, filters bookkeeping noise, and collapses the IAM mirror. The preview UI
+still replays fixtures.
+
 Phase 1 is **not complete** against its exit criteria. Not yet done:
 
 - Teardown and the up -> down -> up proof.
@@ -40,7 +46,7 @@ Phase 1 is **not complete** against its exit criteria. Not yet done:
 
 ## Phase 0 — local prototype (complete)
 
-- 50 unit tests pass (`make test`); `make check` and `make terraform-check` pass.
+- 75 unit tests pass (`make test`); `make check` and `make terraform-check` pass.
 - Preview UI with five scenarios, the evidence graph, replay, export, and the
   GitHub-side fixture previews (PR, push, scheduled issue).
 - Git: public repository `GosYao/drift-lab` with GPG-signed commits; GitHub
@@ -48,8 +54,8 @@ Phase 1 is **not complete** against its exit criteria. Not yet done:
 
 ## Still not done
 
-- **No live collectors.** The UI still replays fixtures; it does not read the
-  deployed cluster.
+- **Collectors are in; the UI is not.** `python -m drift_lab collect` performs
+  verified live read-only collection, but the preview UI still replays fixtures.
 - **No Droid or GitHub workflow.** The GitHub panel is a fixture preview. No App or
   workflow exists, and nothing is posted. The Semgrep and Trivy rows are
   illustrative only.
@@ -66,10 +72,7 @@ Phase 1 is **not complete** against its exit criteria. Not yet done:
    `public_access_cidrs = []` and re-apply once an in-VPC runner exists.
 3. ECR basic scan-on-push returned no scan for the image; the account likely uses
    registry-level (Inspector) scanning. Confirm where findings are reported.
-4. The plan sanitizer can't tell `resource_version` or null-versus-empty noise
-   from real drift, because it exports only type and action. Add attribute-path
-   output and noise filters.
-5. The budget is reporting-only. Expect roughly $5-7/day while the lab is up (EKS
+4. The budget is reporting-only. Expect roughly $5-7/day while the lab is up (EKS
    control plane, NAT gateway, one node).
 
 ## Next decision points

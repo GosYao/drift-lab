@@ -33,6 +33,11 @@ associations, ServiceAccounts, live resource attributes) that emit the same evid
 shape as the fixtures. Extend the observer role only with review. Collectors must
 fail safe: missing evidence -> `inconclusive`, never a guess.
 
+Started 2026-10-30: `python -m drift_lab collect` performs the operator-side
+collection live (laptop credentials, not the GitHub observer role) and was
+verified against the lab with a clean baseline comparison. The observer-role path
+and the UI wiring are still open.
+
 Exit criteria: end-to-end drift detection from live collection to UI brief with no
 fixture in the hot path; collector tests run against sanitized recordings.
 

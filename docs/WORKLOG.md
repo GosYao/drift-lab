@@ -2,6 +2,38 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-10-30 — Sanitizer paths and the committed live collector (0.5.0)
+
+### Done
+
+- Verified the GitHub `security-lab` environment lockdown: required reviewer,
+  branch-policy rule, custom policies, `main` only.
+- Sanitizer upgrade, closing the drift-exercise findings: changed-attribute paths
+  (names only, non-identifier segments hashed), `resource_version`/`generation`
+  and null-versus-empty noise rows dropped, the `aws_iam_role.inline_policy`
+  mirror collapsed into the changed `aws_iam_role_policy` for the same role, and
+  `refresh_only_verdict` classifying output-only exit 2 as no-drift. 13 tests.
+- Committed the one-off live cross-check as `python -m drift_lab collect`
+  (read-only, injectable CLI runner, fail-closed mapping, sanitized snapshots,
+  exit codes 0/2/3). Live smoke test against the lab: the first run failed closed
+  on the Pod Identity reads; fixed the runner (list, then describe by association
+  id) and re-verified: complete collection of all eight tracked resources, clean
+  baseline comparison, exit 0. 12 tests.
+- `make check`: 75 tests, byte-compile, repository contracts.
+
+### Findings
+
+- `aws eks describe-pod-identity-association` requires `--association-id`;
+  service accounts are not a lookup key. The collector lists, then describes.
+- The collector's fail-closed design held up live: failed reads produced an
+  `incomplete` snapshot (exit 3) with the affected resources omitted, never a
+  guessed value or a deletion claim.
+
+### Not done
+
+- Teardown and the up -> down -> up proof; cost recording.
+- The preview UI still replays fixtures; `collect` output is not wired into it.
+
 ## 2026-10-30 — Live drift exercise (0.4.0)
 
 ### Done

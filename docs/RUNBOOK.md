@@ -24,8 +24,9 @@ Importing sanitized plan evidence (used from Phase 1/2 onward):
 python3 -m drift_lab import-plan <plan.json>
 ```
 
-The sanitizer keeps only hashed addresses, resource types, and change actions. Raw
-plans and state are never stored, displayed, or sent to a model.
+The sanitizer keeps only hashed addresses, resource types, change actions, and
+changed-attribute names (non-identifier path segments are hashed). Raw plans and
+state are never stored, displayed, or sent to a model.
 
 ## Cloud operations (authorization-gated)
 
@@ -43,6 +44,30 @@ endpoint (`public_access_cidrs` in `eks-lab`). Lessons from the live run:
   Change", run `terraform state rm kubernetes_deployment_v1.preview`, delete the
   empty Deployment, and re-apply.
 - Cluster access: `aws eks update-kubeconfig --name drift-lab --alias drift-lab`.
+- `aws eks describe-pod-identity-association` requires `--association-id`;
+  service accounts are not a lookup key. List, then describe.
+
+Live drift check (read-only; no apply):
+
+```
+aws sso login --profile demo-admin
+aws eks update-kubeconfig --name drift-lab --alias drift-lab
+python3 -m drift_lab collect --config configs/collector.json \
+  --profile demo-admin --region ca-central-1 --kubeconfig ~/.kube/config \
+  > /tmp/drift-baseline.json
+python3 -m drift_lab collect --config configs/collector.json \
+  --profile demo-admin --region ca-central-1 --kubeconfig ~/.kube/config \
+  --baseline /tmp/drift-baseline.json
+```
+
+The collector runs read-only queries only (IAM `get-role-policy` per role, EKS
+Pod Identity list + describe per service account, `kubectl get deployment`) and
+emits a sanitized-observation snapshot: no ARNs, account IDs, or policy statements,
+with images normalized to repository@digest. Grant, role, or service-account
+values outside the configured read-only model make the collection `incomplete`,
+never a guess. Collect the baseline while the lab is in its approved state and keep
+baseline files out of the repository. Exit codes: 0 clean/complete, 2 review
+required, 3 inconclusive/incomplete.
 
 Preconditions, in order:
 
