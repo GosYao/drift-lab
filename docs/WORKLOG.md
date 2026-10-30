@@ -43,10 +43,28 @@ Running record of what was done, decided, and deliberately not done. Newest firs
   the `curl` line. Same lesson as 0.7.0's KMS annotation: the ID in the
   annotation must be the full rule ID, and the line must be the match start.
 
+### Verified
+
+- The re-triggered run on PR #1 (merge of main with the 0.7.1 annotation and
+  the seeded broadening) landed the intended matrix:
+  - `make check`: pass
+  - `semgrep`: pass — the inline acceptance works in CI
+  - `trivy`: pass
+  - `terraform-check + policy-test`: fail — 4 passed, 1 failed, on exactly
+    "support-agent must read only the customer-orders table"
+  - `droid availability`: pass (FACTORY_API_KEY still unset)
+  - `droid review (read-only)` / `post droid review`: skipped, as designed
+- Cross-arm observation, recorded factually: the external Lacework IAC and SCA
+  checks (partner-demo account) reported pass on the same seeded broadening.
+  Generic compliance packs do not encode this lab's capability intent; the
+  repo's own policy-as-code does. One seeded case, no generalization beyond
+  it.
+
 ### Not done
 
-- The verification PR still needs a re-trigger against annotated main to show
-  the final matrix (all gates green except the seeded policy failure).
+- The full Droid review arm (credentialed exec + posted comment) awaits the
+  user setting `FACTORY_API_KEY` as a repository secret; the user chose to
+  verify it end-to-end and to keep PR #1 open as a live demo.
 
 ## 2026-10-30 — Pull-request workflow with credential-separated Droid review (0.7.0)
 

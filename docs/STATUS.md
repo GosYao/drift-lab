@@ -59,11 +59,14 @@ Phase 1 is **not complete** against its exit criteria. Not yet done:
 
 - **Collectors are in; the UI is not.** `python -m drift_lab collect` performs
   verified live read-only collection, but the preview UI still replays fixtures.
-- **The GitHub workflow exists; the Droid arm is gated.** Pull requests to `main`
-  now run the deterministic gates (tests, terraform-check + policy-test,
-  Semgrep, Trivy) plus a credential-separated, read-only Droid review. The
-  Droid arm stays skipped until the user sets `FACTORY_API_KEY` as a repository
-  secret. The GitHub panel in the UI remains a fixture preview.
+- **The PR workflow is verified live; the Droid arm is gated.** Pull requests to
+  `main` run the deterministic gates (tests, terraform-check + policy-test,
+  Semgrep, Trivy) plus a credential-separated, read-only Droid review. Verified
+  on seeded PR #1 (kept open as a live demo): every gate green except the
+  capability-intent gate, which fails on exactly the seeded support-role
+  broadening; the Droid jobs skip while `FACTORY_API_KEY` is unset — the user
+  is setting it to verify the review arm end-to-end. The GitHub panel in the
+  UI remains a fixture preview.
 - **Real agent egress is blocked by design.** Pod Identity credentials, DNS, and
   DynamoDB need a reviewed egress allow-list before a real agent replaces the
   fixture viewer.
