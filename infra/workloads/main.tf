@@ -75,9 +75,7 @@ resource "aws_iam_role_policy" "agent" {
     Statement = [{
       Effect = "Allow"
       Action = ["dynamodb:GetItem", "dynamodb:Query"]
-      Resource = each.key == "support-agent" ? [
-        aws_dynamodb_table.synthetic["customer-orders"].arn
-        ] : [
+      Resource = [
         aws_dynamodb_table.synthetic["customer-orders"].arn,
         aws_dynamodb_table.synthetic["customer-archive"].arn
       ]
