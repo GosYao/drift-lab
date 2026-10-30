@@ -27,6 +27,9 @@ and what is not. Cloud steps are authorization-gated and documented in
 - Policy-as-code: capability intent (read scope, identity pinning, workload
   hardening, namespace isolation) asserted by credential-free `terraform test`
   runs with mock providers; a seeded IAM broadening fails them.
+- A pull-request workflow where deterministic gates decide and a read-only
+  Droid review with separate credentials explains the findings instead of
+  re-deciding them.
 - A local preview UI with the graph, findings, a written brief, scenario replay,
   and JSON export.
 - Three Terraform stacks (foundation, EKS lab, workloads) with an explicit security
@@ -55,6 +58,7 @@ if you want the exact versions this prototype was validated with.
 | `drift_lab/` | Local engine: scenarios, comparison, plan sanitizer, collector, server, UI |
 | `tests/` | `unittest` suite (engine, sanitizer, collector, server) |
 | `configs/` | Lab topology for the live collector (non-secret names only) |
+| `.github/` | PR workflow: deterministic gates + credential-separated Droid review |
 | `scripts/` | Preflight, repository contract checks, pinned-tool bootstrap |
 | `infra/foundation` | State bucket, ECR, GitHub OIDC observer role, budget |
 | `infra/eks-lab` | VPC, private-endpoint EKS cluster, managed node group |

@@ -2,6 +2,38 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-10-30 — Pull-request workflow with credential-separated Droid review (0.7.0)
+
+### Done
+
+- Pre-verified the scanner arms locally before wiring CI, using the same
+  digest-pinned images CI runs: Semgrep 1.183.0 (OWASP Top 10; 286 rules over
+  54 files) and Trivy 0.76.1 (vuln + secret). Both clean on main.
+- Added `.github/workflows/pull-request.yml`: deterministic gates (make check;
+  terraform-check + policy-test; semgrep; trivy) plus a Droid review arm with
+  separated credentials — `FACTORY_API_KEY` lives only in the read-only
+  `droid exec` job, `GITHUB_TOKEN` (pull-requests: write) only in the posting
+  job. Actions pinned by SHA; scanner images pinned by digest.
+- The Droid job captures `make check` and `make policy-test` outcomes for the
+  PR and passes them with the standing prompt, so the review cites
+  deterministic findings instead of re-deciding them.
+
+### Findings
+
+- Semgrep flagged the synthetic DynamoDB tables
+  (`aws-dynamodb-table-unencrypted`: wants a customer-managed KMS key).
+  Triaged and accepted inline with rationale — synthetic, disposable data;
+  AWS-managed SSE is deliberate for this lab.
+- Trivy found no secrets: the deliberate test-fixture strings are not
+  credential-shaped, and real account IDs never enter the repo.
+- The Droid arm stays skipped until `FACTORY_API_KEY` is set as a repository
+  secret (user action; the gate job never exposes the value).
+
+### Not done
+
+- The Droid arm has not been observed on a real run yet: it needs the repo
+  secret.
+
 ## 2026-10-30 — Capability intent as policy-as-code (0.6.0)
 
 ### Done

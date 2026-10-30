@@ -35,7 +35,10 @@ resource "kubernetes_service_account_v1" "agent" {
   automount_service_account_token = false
 }
 
-resource "aws_dynamodb_table" "synthetic" {
+# Synthetic, disposable drift-test data: AWS-managed SSE is deliberate here.
+# A customer-managed KMS key is not justified for tables that never hold real
+# data. Accepted with rationale (triage record in docs/WORKLOG.md).
+resource "aws_dynamodb_table" "synthetic" { # nosemgrep: terraform.aws.security.aws-dynamodb-table-unencrypted.aws-dynamodb-table-unencrypted
   for_each     = toset(["customer-orders", "customer-archive"])
   name         = "${var.cluster_name}-${each.key}"
   billing_mode = "PAY_PER_REQUEST"

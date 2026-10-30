@@ -1,0 +1,194 @@
+# Pull-request checks for Drift Lab.
+#
+# Deterministic gates come first and their verdicts are authoritative:
+#   - make check           unit tests + repo contracts
+#   - make terraform-check fmt/validate (no backend, no credentials)
+#   - make policy-test     capability-intent Terraform tests (mock providers)
+#   - semgrep              OWASP Top 10 (pinned image digest)
+#   - trivy                vuln + secret scan (pinned image digest)
+#
+# The Droid review is a separate explanation layer with separated credentials:
+# the credentialed job (FACTORY_API_KEY, read-only checkout, no GitHub token)
+# runs `droid exec` read-only and uploads the review as an artifact; a second
+# job holding only GITHUB_TOKEN (pull-requests: write) posts it. Droid cites
+# the deterministic outcomes; it cannot override them.
+#
+# Deliberately absent: any terraform plan/apply against AWS (the approved
+# deployment revision only, per AGENTS.md), and any scheduled drift check
+# (hosted runners cannot reach the lab's private EKS API).
+name: pull-request
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+# Least privilege by default; each job elevates only what it needs.
+permissions: {}
+
+concurrency:
+  group: pull-request-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: make check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - run: make check
+
+  terraform:
+    name: terraform-check + policy-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.13.5
+          terraform_wrapper: false
+      - run: make terraform-check
+      - run: make policy-test
+
+  semgrep:
+    name: semgrep (owasp-top-ten)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Semgrep scan
+        run: >-
+          docker run --rm -v "$PWD:/src:ro"
+          semgrep/semgrep@sha256:2e45517a85e13a9cca14a2a00df6bb48affd66b8ebfae1b0991cd57578362fb0
+          semgrep scan --config p/owasp-top-ten --error --metrics=off
+
+  trivy:
+    name: trivy (vuln, secret)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Trivy filesystem scan
+        run: >-
+          docker run --rm -v "$PWD:/repo:ro"
+          aquasec/trivy@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
+          fs --scanners vuln,secret --severity HIGH,CRITICAL --exit-code 1
+          --no-progress --ignore-unfixed --skip-dirs .git /repo
+
+  droid-gate:
+    name: droid availability
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        env:
+          # Boolean only; the secret value never enters the log.
+          HAS_KEY: ${{ secrets.FACTORY_API_KEY != '' }}
+        run: echo "configured=$HAS_KEY" >> "$GITHUB_OUTPUT"
+
+  droid-review:
+    name: droid review (read-only)
+    needs: droid-gate
+    if: needs.droid-gate.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      # The only credential this job receives. It holds no GitHub write
+      # token, so the review run cannot post, approve, or modify anything.
+      FACTORY_API_KEY: ${{ secrets.FACTORY_API_KEY }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.13.5
+          terraform_wrapper: false
+      - name: Capture deterministic gate outcomes
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set +e
+          make check > /tmp/check.log 2>&1
+          CHECK_EXIT=$?
+          make policy-test > /tmp/policy.log 2>&1
+          POLICY_EXIT=$?
+          set -e
+          {
+            echo "PR: #$PR_NUMBER — $PR_TITLE"
+            echo "Author: $PR_AUTHOR"
+            echo "Base SHA: $BASE_SHA"
+            echo "Head SHA: $HEAD_SHA"
+            echo
+            echo "## make check (unit tests + repo contracts) — exit $CHECK_EXIT"
+            tail -n 40 /tmp/check.log
+            echo
+            echo "## make policy-test (capability-intent Terraform tests) — exit $POLICY_EXIT"
+            tail -n 80 /tmp/policy.log
+          } > /tmp/deterministic-outcomes.md
+      - name: Install Droid CLI
+        run: |
+          curl -fsSL https://app.factory.ai/cli | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/droid" --version
+      - name: Run read-only Droid review
+        run: |
+          cat .github/droid-review-prompt.md /tmp/deterministic-outcomes.md > /tmp/prompt.md
+          droid exec -f /tmp/prompt.md > /tmp/droid-review.md
+          test -s /tmp/droid-review.md
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: droid-review
+          path: /tmp/droid-review.md
+          if-no-files-found: error
+
+  post-review:
+    name: post droid review
+    needs: droid-review
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: droid-review
+      - name: Post review comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr comment "$PR_URL" --body-file droid-review.md

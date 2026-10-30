@@ -50,7 +50,9 @@ before it is called verified; remediation may be reconciliation rather than a PR
 
 Started 2026-10-30: the deterministic validation gate now includes capability-intent
 Terraform tests (`make policy-test`, mock providers, credential-free); a seeded
-support-role broadening fails them.
+support-role broadening fails them. A pull-request workflow (0.7.0) runs the
+deterministic gates and a credential-separated, read-only Droid review that
+cites their outcomes instead of re-deciding them.
 
 Exit criteria: at least one live drift handled end-to-end with a verified fix; cost
 per verified fix measured and recorded.

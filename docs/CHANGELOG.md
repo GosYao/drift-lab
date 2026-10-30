@@ -3,6 +3,32 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.7.0 — 2026-10-30
+
+GitHub Actions pull-request workflow with credential-separated Droid review.
+
+### Added
+
+- `.github/workflows/pull-request.yml`: deterministic gates on every PR to
+  `main` — `make check`, `make terraform-check` + `make policy-test` (no
+  backend, no credentials), Semgrep (OWASP Top 10) and Trivy (vuln + secret)
+  from digest-pinned images. Third-party actions are pinned by commit SHA.
+- Droid review with separated credentials: a gate job exposes only whether
+  `FACTORY_API_KEY` is configured (never its value); the credentialed job runs a
+  read-only `droid exec` review with the captured deterministic outcomes and no
+  GitHub write token, and uploads the review as an artifact; a separate job
+  holding only `GITHUB_TOKEN` (pull-requests: write) posts it. Droid cites the
+  deterministic findings and cannot override their verdicts.
+- `.github/droid-review-prompt.md`: standing review instructions (cite gates,
+  classify drift, never override verdicts, state a verified fix path).
+
+### Accepted
+
+- Semgrep `aws-dynamodb-table-unencrypted` (customer-managed KMS key) is
+  accepted inline in `infra/workloads/main.tf`: the tables hold only synthetic,
+  disposable drift-test data behind AWS-managed SSE. Scanner runs are
+  pre-verified clean locally with the same pinned image digests CI uses.
+
 ## 0.6.0 — 2026-10-30
 
 Policy-as-code: capability intent as credential-free Terraform tests.

@@ -29,6 +29,29 @@ The sanitizer keeps only hashed addresses, resource types, change actions, and
 changed-attribute names (non-identifier path segments are hashed). Raw plans and
 state are never stored, displayed, or sent to a model.
 
+## Pull-request CI
+
+`.github/workflows/pull-request.yml` runs on every PR to `main`: `make check`,
+`make terraform-check` + `make policy-test`, Semgrep (OWASP Top 10), and Trivy
+(vuln + secret) — pinned (actions by commit SHA, scanner images by digest) and
+credential-free. The workflow never plans or applies against AWS.
+
+To enable the Droid review arm:
+
+1. Create an API key at https://app.factory.ai/settings/api-keys.
+2. `gh secret set FACTORY_API_KEY --repo GosYao/drift-lab`
+
+The credentialed job runs a read-only `droid exec` review and never holds a
+GitHub write token; a separate job posts the review using `GITHUB_TOKEN` only.
+Local pre-verification of the scanners uses the same pinned digests, for
+example:
+
+```
+docker run --rm -v "$PWD:/src:ro" \
+  semgrep/semgrep@sha256:2e45517a85e13a9cca14a2a00df6bb48affd66b8ebfae1b0991cd57578362fb0 \
+  semgrep scan --config p/owasp-top-ten --error --metrics=off
+```
+
 ## Cloud operations (authorization-gated)
 
 Phase 1 deployment record (2026-10-29): profile `demo-admin`, region `ca-central-1`.
