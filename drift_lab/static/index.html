@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Drift Lab | Evidence-first security</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="Drift Lab home"><span class="brand-mark">d<span>↗</span></span>drift lab<span class="prototype">0.1</span></a>
+    <div class="workspace"><span class="workspace-icon">S</span><div>Security playground<small>Personal workspace</small></div></div>
+    <div class="nav-caption">WORKSPACE</div>
+    <nav aria-label="Workspace navigation">
+      <a class="nav-item selected" href="#overview"><span>◈</span>Drift intelligence<span class="nav-dot"></span></a>
+      <a class="nav-item" href="#graph-section"><span>⌘</span>Security graph</a>
+      <a class="nav-item" href="#evidence-section"><span>▤</span>Evidence &amp; coverage</a>
+      <a class="nav-item" href="#runbook"><span>↳</span>Reconciliation</a>
+      <a class="nav-item" href="#github-section"><span>▦</span>GitHub signals</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="lab-note"><span class="tiny-dot"></span>LOCAL PROTOTYPE<p>Explore the workflow.<br>No cloud account connected.</p></div>
+      <div class="profile"><span class="avatar">DL</span><div>Demo environment<small>Synthetic data only</small></div></div>
+    </div>
+  </aside>
+
+  <div class="shell">
+    <header class="topbar">
+      <div class="breadcrumb">Workspace<span>/</span><strong>Drift intelligence</strong></div>
+      <div class="topbar-right"><span class="fixture-label"><span class="tiny-dot"></span>Fixture mode</span><span class="top-avatar">DL</span></div>
+    </header>
+
+    <main id="overview">
+      <div class="page-heading">
+        <div><div class="eyebrow">CODE → CLOUD → CONSEQUENCE</div><h1>Drift intelligence</h1><p>See what changed. Understand what it unlocks.</p></div>
+        <button id="export" class="button secondary"><span aria-hidden="true">↗</span> Export evidence</button>
+      </div>
+
+      <section class="environment-strip" aria-label="Environment information">
+        <span class="aws-icon">aws</span><div><strong>eks-security-lab</strong><span>Amazon EKS <i>·</i> us-east-1 <i>·</i> Synthetic fixture</span></div>
+        <div class="env-state"><span class="tiny-dot"></span>Not connected to AWS</div>
+      </section>
+
+      <div class="scenario-header"><span class="section-label">EXPLORE A SCENARIO</span><span>Repeatable inputs. Explicit evidence.</span></div>
+      <div id="scenarios" class="scenario-list" role="group" aria-label="Demo scenarios"></div>
+      <div id="error" class="error hidden" role="alert"></div>
+
+      <section class="metrics" aria-label="Observation summary">
+        <article class="metric"><div>Security-relevant changes<span class="metric-icon red">↗</span></div><strong id="security-count">—</strong><small id="security-note">Loading observations</small></article>
+        <article class="metric"><div>Tracked resources<span class="metric-icon">◇</span></div><strong id="resource-count">—</strong><small>Across application, EKS, and IAM</small></article>
+        <article class="metric"><div>Collection coverage<span class="metric-icon">◎</span></div><strong id="coverage-count">—</strong><small id="coverage-note">Scoped attributes, not estate coverage</small></article>
+        <article class="metric"><div>Analysis method<span class="metric-icon">⌁</span></div><strong class="text-metric">Deterministic</strong><small>No model invoked · $0 model usage</small></article>
+      </section>
+
+      <section class="panel graph-panel" id="graph-section">
+        <div class="panel-heading"><div><h2>Where the change leads <span class="badge neutral">CAPABILITY MAP</span></h2><p id="graph-description">Following the relationship from an agent tool to the data it can reach.</p></div>
+          <div class="segmented" role="group" aria-label="Graph view">
+            <button id="observed-view" class="active" aria-pressed="true">Observed + drift</button>
+            <button id="baseline-view" aria-pressed="false">Approved baseline</button>
+          </div>
+        </div>
+        <div class="graph-columns"><span>APPLICATION</span><span>KUBERNETES WORKLOAD</span><span>SERVICE ACCOUNT</span><span>AWS IDENTITY</span><span>DATA RESOURCE</span></div>
+        <div class="graph-scroll"><svg id="graph" viewBox="0 0 1080 420" role="img" aria-label="Evidence-backed capability graph"><title>Capability graph</title></svg></div>
+        <div class="graph-footer"><div class="legend"><span><i class="line red"></i>Added relationship</span><span><i class="line dashed"></i>Removed relationship</span><span><i class="line"></i>Unchanged</span></div><span>Configuration paths ≠ proven exploitation</span></div>
+        <div id="node-detail" class="node-detail" aria-live="polite">Select a node to inspect its source evidence.</div>
+      </section>
+
+      <div class="details-grid">
+        <section class="panel finding-panel">
+          <div class="panel-heading compact"><h2>Observed differences <span id="finding-count" class="badge neutral">0</span></h2><span class="section-label">BASELINE vs OBSERVED</span></div>
+          <div id="findings" class="findings"></div>
+          <div class="scope-note">Missing observations stay inconclusive. Expected scaling is not classified as permission drift.</div>
+        </section>
+        <section class="panel investigation-panel" id="runbook">
+          <div class="panel-heading compact"><h2>Investigation brief</h2><span class="badge neutral">RULE-BACKED</span></div>
+          <div id="investigation"></div>
+          <div class="actions"><button id="replay" class="button primary">Run fixture check <span aria-hidden="true">→</span></button><button id="reconcile" class="button secondary">Preview reconciliation</button></div>
+          <div id="replay-result" class="replay-result hidden" role="status"></div>
+        </section>
+      </div>
+
+      <section class="panel github-panel" id="github-section">
+        <div class="panel-heading"><div><h2>How it lands on GitHub <span class="badge neutral">FIXTURE PREVIEW</span></h2><p id="github-description">What the deterministic checks would post when a pull request, a push, or a scheduled run triggers. Nothing here is sent to GitHub.</p></div><span class="badge neutral">NO GITHUB WRITES</span></div>
+        <div class="github-toolbar"><span class="section-label">CHOOSE A TRIGGER</span><div id="github-triggers" class="scenario-list github-triggers" role="group" aria-label="GitHub trigger previews"></div></div>
+        <div id="github-view" class="github-view"></div>
+        <div class="honesty-note"><span aria-hidden="true">ⓘ</span><p>Fixture previews of GitHub UI states, rendered locally from the same deterministic reports as the drift view. Droid has not authenticated to GitHub and nothing was posted to any repository; a real integration would publish this evidence-backed content through the GitHub API only after repository and workflow authorization.</p></div>
+      </section>
+
+      <section class="panel evidence-panel" id="evidence-section">
+        <div class="panel-heading compact"><h2>Evidence &amp; boundaries</h2><span class="badge neutral">TRANSPARENT BY DESIGN</span></div>
+        <div class="evidence-grid">
+          <div><span class="section-label">APPROVED REVISION</span><code id="revision">fixture:approved-v1</code><small>Illustrative identifier, not a Git commit</small></div>
+          <div><span class="section-label">STATE BASELINE</span><code id="state-version">fixture:state-v7</code><small>No Terraform state loaded</small></div>
+          <div><span class="section-label">OBSERVATION SOURCE</span><code>Synthetic snapshots</code><small>No AWS APIs or Kubernetes APIs called</small></div>
+          <div><span class="section-label">DROID CONNECTION</span><code>Not connected</code><small>Export a sanitized investigation packet</small></div>
+        </div>
+        <div class="honesty-note"><span aria-hidden="true">ⓘ</span><p>This preview compares synthetic snapshots and replays a simplified grant model. It does not evaluate AWS effective permissions, run an agent attack, send email, or change infrastructure. A baseline preview is not a remediation.</p></div>
+      </section>
+      <footer class="page-footer"><span>DRIFT LAB / SECURITY PROTOTYPE</span><span>Evidence first. Reasoning second. Verification always.</span></footer>
+    </main>
+  </div>
+</body>
+</html>

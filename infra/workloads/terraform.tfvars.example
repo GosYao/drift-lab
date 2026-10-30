@@ -1,0 +1,4 @@
+region            = "us-east-1"
+account_id        = "REPLACE_WITH_SANDBOX_ACCOUNT"
+cluster_name      = "drift-lab"
+application_image = "REPLACE_ECR_REPOSITORY@sha256:REPLACE_IMAGE_DIGEST"

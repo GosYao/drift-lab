@@ -1,0 +1,6 @@
+region                      = "us-east-1"
+account_id                  = "REPLACE_WITH_SANDBOX_ACCOUNT"
+kubernetes_version          = "REPLACE_WITH_SUPPORTED_VERSION"
+cluster_admin_principal_arn = "arn:aws:iam::REPLACE_ACCOUNT:role/REPLACE_REVIEWED_ADMIN"
+expires_at                  = "2026-10-30T20:00:00Z"
+# Re-check expiry on every launch. A tag is not automatic deletion.

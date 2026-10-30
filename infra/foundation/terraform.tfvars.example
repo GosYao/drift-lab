@@ -1,0 +1,5 @@
+region              = "us-east-1"
+account_id          = "REPLACE_WITH_SANDBOX_ACCOUNT"
+github_oidc_subject = "repo:REPLACE_ORG/REPLACE_CONTROL_REPO:environment:security-lab"
+# Existing providers and newer GitHub immutable subjects must be inspected.
+monthly_budget_usd = 500

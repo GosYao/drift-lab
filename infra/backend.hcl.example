@@ -1,0 +1,4 @@
+bucket              = "REPLACE_FOUNDATION_STATE_BUCKET"
+region              = "us-east-1"
+allowed_account_ids = ["REPLACE_WITH_SANDBOX_ACCOUNT"]
+# Each stack defines its own state key. No credentials belong in this file.
