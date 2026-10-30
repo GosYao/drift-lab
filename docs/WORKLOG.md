@@ -2,6 +2,40 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-10-30 — Droid review arm verified end-to-end (0.7.2)
+
+### Done
+
+- User set `FACTORY_API_KEY` as a repository secret; re-triggered seeded PR #1
+  (empty commit f8f50cf). The full arm ran as designed:
+  - `droid availability`: pass — reports the key as configured (boolean only;
+    the value never left the secret store)
+  - `droid review (read-only)`: pass, 57s — captures `make check` (exit 0,
+    75 tests + contracts) and `make policy-test` (exit 2), runs the read-only
+    `droid exec` review with those outcomes and the standing prompt, uploads
+    the review as an artifact
+  - `post droid review`: pass, 5s — the token-only job posts the review as a
+    PR comment
+- The posted review behaved as the design intends:
+  - cites the deterministic gate, run, exact assertion condition, and assertion
+    text — it does not re-decide the verdict
+  - classifies the seed correctly: a proposed intent change, not out-of-band
+    drift or noise; an approved expansion would have to update the capability
+    baseline, and this seed does not
+  - states the evidence is mock-provider verification, not live AWS access
+  - notes the merge-ref nuance (workspace HEAD carries main's later commits)
+    without inventing issues from it
+  - ends with the required single line, `VERDICT: request changes`, and a
+    verified fix path: restore the conditional, re-run `make policy-test`, all
+    five runs pass without weakening assertions
+
+### Verified
+
+- PR #1 stays open as the live demo: all deterministic gates green except the
+  seeded capability failure, and the Droid review posted citing exactly that
+  failure. The workflow never plans or applies against AWS, and no job holds
+  both the Factory key and a GitHub write token.
+
 ## 2026-10-30 — First live PR run: the scanner caught the pipeline itself (0.7.1)
 
 ### Done

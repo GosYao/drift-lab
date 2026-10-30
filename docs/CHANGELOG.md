@@ -3,6 +3,17 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.7.2 — 2026-10-30
+
+The Droid review arm verified end-to-end on seeded PR #1, with the arm
+admitted by the availability gate and the review posted by the token-separated
+job. The read-only review cited the failing deterministic gate by name, run,
+and exact assertion condition ("support-agent must read only the customer-orders
+table"), classified the seed as a proposed intent change that does not justify
+weakening the capability baseline, distinguished mock-provider verification from
+live AWS access, and closed with `VERDICT: request changes` plus a verified fix
+path. The deterministic gates decided; the review explained them.
+
 ## 0.7.1 — 2026-10-30
 
 CI catch: Semgrep flagged the Droid CLI install step's `curl | sh` pattern
