@@ -24,6 +24,9 @@ and what is not. Cloud steps are authorization-gated and documented in
 - A read-only live collector (`python -m drift_lab collect`): IAM, Pod Identity,
   and Kubernetes reads mapped onto the same sanitized schema, failing closed on
   anything outside the read-only model (verified live; see `docs/RUNBOOK.md`).
+- Policy-as-code: capability intent (read scope, identity pinning, workload
+  hardening, namespace isolation) asserted by credential-free `terraform test`
+  runs with mock providers; a seeded IAM broadening fails them.
 - A local preview UI with the graph, findings, a written brief, scenario replay,
   and JSON export.
 - Three Terraform stacks (foundation, EKS lab, workloads) with an explicit security
@@ -36,6 +39,7 @@ make preview          # serve the UI at http://127.0.0.1:8765 (Ctrl-C to stop)
 make test             # unit tests; stdlib only, no cloud access
 make check            # tests + byte-compile + repository contract checks
 make terraform-check  # terraform fmt -check + init -backend=false + validate
+make policy-test      # capability-intent terraform tests; mock providers, no credentials
 make report           # print the iam scenario report as JSON
 make preflight        # local environment preflight
 ```

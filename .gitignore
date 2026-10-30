@@ -19,3 +19,4 @@ artifacts/*
 !artifacts/validation.md
 !artifacts/github-preview-*.png
 node_modules/
+.policy-test-tmp/

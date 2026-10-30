@@ -47,6 +47,9 @@ Phase 1 is **not complete** against its exit criteria. Not yet done:
 ## Phase 0 — local prototype (complete)
 
 - 75 unit tests pass (`make test`); `make check` and `make terraform-check` pass.
+- `make policy-test` (capability-intent Terraform tests, mock providers, no
+  credentials) passes on the approved revision and fails on a seeded IAM
+  broadening.
 - Preview UI with five scenarios, the evidence graph, replay, export, and the
   GitHub-side fixture previews (PR, push, scheduled issue).
 - Git: public repository `GosYao/drift-lab` with GPG-signed commits; GitHub

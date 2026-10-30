@@ -48,6 +48,10 @@ evidence, explains impact against the graph, and proposes a verified fix (pull
 request or reconciliation). Every fix must pass the same deterministic validation
 before it is called verified; remediation may be reconciliation rather than a PR.
 
+Started 2026-10-30: the deterministic validation gate now includes capability-intent
+Terraform tests (`make policy-test`, mock providers, credential-free); a seeded
+support-role broadening fails them.
+
 Exit criteria: at least one live drift handled end-to-end with a verified fix; cost
 per verified fix measured and recorded.
 

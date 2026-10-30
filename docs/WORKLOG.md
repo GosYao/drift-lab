@@ -2,6 +2,31 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-10-30 — Capability intent as policy-as-code (0.6.0)
+
+### Done
+
+- Added `infra/workloads/policy.tftest.hcl`: five plan-only runs with mocked AWS
+  and Kubernetes providers, asserting the approved capability intent (read
+  scope, identity pinning, workload hardening, namespace isolation). Runs in a
+  disposable copy (`make policy-test`) so the operator's initialized S3-backend
+  directory is untouched; no credentials and no account access.
+- Verified both directions: passes on the approved revision; a seeded
+  support-role broadening (orders + archive, the live drift shape) fails the
+  suite with exit 1.
+
+### Findings
+
+- Terraform test mock providers need `override_during = plan` (on the provider
+  and in each `override_resource` block) for computed values to be known in
+  plan-only runs; otherwise assertions fail with "Unknown condition value".
+- Generated mock ARNs are not format-valid, which breaks apply runs through
+  attributes that validate ARNs (`aws_eks_pod_identity_association.role_arn`).
+  Plan-only runs plus explicit ARN overrides avoid both problems.
+- Provider shape quirks: `policy_types` and `capabilities.drop` compare as sets,
+  and `spec.replicas` surfaces as the string "1"; normalize with `toset()` and
+  `tonumber()`.
+
 ## 2026-10-30 — Sanitizer paths and the committed live collector (0.5.0)
 
 ### Done

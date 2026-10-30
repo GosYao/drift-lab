@@ -3,6 +3,32 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.6.0 — 2026-10-30
+
+Policy-as-code: capability intent as credential-free Terraform tests.
+
+### Added
+
+- `infra/workloads/policy.tftest.hcl`: five `terraform test` runs against mock
+  providers (no account, no credentials), executed in a disposable copy by
+  `make policy-test`. They encode the capability intent of the approved revision:
+  - `support-agent` reads only `customer-orders`; `reporting-agent` reads
+    `customer-orders` and `customer-archive`; both hold only
+    `dynamodb:GetItem`/`dynamodb:Query` (no writes, no wildcards).
+  - Pod Identity associations are pinned to the matching lab roles; service
+    accounts do not automount API tokens.
+  - The preview workload runs on the `support-agent` identity, at 1 replica,
+    with a digest-pinned image, as non-root, no privilege escalation, a
+    read-only root filesystem, and all capabilities dropped.
+  - The namespace enforces restricted Pod Security and the default-deny policy
+    selects all pods in both directions.
+  - Distinct synthetic ARNs are overridden during plan so scope and identity
+    assertions compare real differences, not shared generated strings.
+- Verified both directions: the suite passes on the approved revision and fails
+  (exit 1) on a seeded support-role broadening — the same drift shape as the live
+  exercise.
+- `make policy-test` target; `.policy-test-tmp/` is gitignored.
+
 ## 0.5.0 — 2026-10-30
 
 Sanitized attribute paths and the read-only live collector.

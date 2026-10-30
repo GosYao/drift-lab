@@ -12,6 +12,7 @@ agent-browser 0.40.0).
 | `make test` | Run the unit suite (no network) |
 | `make check` | Tests + byte-compile + repository contract checks |
 | `make terraform-check` | `fmt -check`, `init -backend=false`, `validate` for all stacks; uses `.tools/terraform` when present; configures no backend and touches no AWS account |
+| `make policy-test` | Capability-intent `terraform test` runs with mock providers, in a disposable copy; no credentials, no account access |
 | `make report` | Print the `iam` scenario report as JSON |
 | `make preflight` | Check the local environment |
 
