@@ -209,7 +209,7 @@ def push_payload():
                     {"name": "droid / drift-policy", "status": "completed",
                      "conclusion": "success",
                      "summary": "{}: replicas 2 → 3 stays inside the approved range "
-                                "[2, 4] — expected, recorded.".format(scaling["id"])},
+                                "[1, 4] — expected, recorded.".format(scaling["id"])},
                 ],
             },
             "comments": [{
@@ -218,7 +218,7 @@ def push_payload():
                 "posted_at": DISPLAY_TIME,
                 "body": [
                     paragraph("Checked against the approved revision: replicas 2 → 3 "
-                              "stays inside the approved range [2, 4]. Recorded as {} "
+                              "stays inside the approved range [1, 4]. Recorded as {} "
                               "— expected, no security reconciliation needed.".format(
                                   scaling["id"])),
                     paragraph("Expected scaling is tracked separately from permission "

@@ -105,7 +105,7 @@ def compare(expected, observed):
     before, after = indexed(expected), indexed(observed)
     findings = []
     complete = observed["collection"]["status"] == "complete"
-    allowed_range = expected.get("policy", {}).get("approved_replica_range", [2, 4])
+    allowed_range = expected.get("policy", {}).get("approved_replica_range", [1, 4])
     if (not isinstance(allowed_range, list) or len(allowed_range) != 2
             or any(type(v) is not int for v in allowed_range)
             or allowed_range[0] > allowed_range[1]):

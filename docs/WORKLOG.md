@@ -2,6 +2,36 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-10-30 — Live drift exercise (0.4.0)
+
+### Done
+
+- Renewed SSO (user-approved). Took a baseline of `workloads`: accepted the provider
+  null-to-empty normalization on the Deployment into state (refresh-only apply), so
+  `resource_drift` started empty.
+- Injected two out-of-band drifts: an IAM inline-policy edit (support role gains
+  `customer-archive`) and a `kubectl patch` of the Deployment's ServiceAccount to
+  `reporting-agent`.
+- Both were detected by `plan -refresh-only` (resource_drift) and by the normal plan
+  (exit 2, 2 updates), and sanitized through `import-plan`. Live reads fed to the
+  rules engine gave two HIGH findings and the forbidden-dataset capability path.
+- Reconciled with user approval: applied the normal plan (2 changed). The re-plan
+  was clean (exit 0); the remaining refresh-only rows were `resource_version`
+  noise only.
+- Changed the fixture replica range from 2-4 to 1-4 to match the deployed IaC.
+  Added a regression test (50 tests).
+- Evidence record: `artifacts/validation.md` (sanitized).
+
+### Findings
+
+- The sanitizer reports noise (`resource_version`, null versus empty) the same way
+  as real drift. It needs changed-attribute paths and noise filters.
+- Refresh-only exit 2 also fires for output-value changes alone.
+- IAM inline-policy drift appears on both the policy and the parent role.
+
+### Not done
+
+- Teardown and the up -> down -> up proof; cost recording.
 ## 2026-10-29 — Phase 1 deployment (0.3.0)
 
 ### Done

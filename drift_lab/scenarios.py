@@ -10,7 +10,7 @@ SCENARIOS = [
     {"id": "identity", "name": "Kubernetes identity drift", "description":
      "The Deployment switches to the reporting ServiceAccount."},
     {"id": "scaling", "name": "Expected scaling change", "description":
-     "Replicas increase within the approved two-to-four range."},
+     "Replicas increase within the approved one-to-four range."},
     {"id": "incomplete", "name": "Incomplete collection", "description":
      "The IAM collector cannot inspect the current policy."},
     {"id": "clean", "name": "Approved baseline", "description":
@@ -61,7 +61,7 @@ def baseline():
                      {"classification": "synthetic", "tenant": "customer-b"},
                      "fixture://dynamodb/customer-archive"),
         ],
-        "policy": {"approved_replica_range": [2, 4],
+        "policy": {"approved_replica_range": [1, 4],
                    "forbidden_dataset": "table:archive",
                    "principal_tool": "tool:lookup"},
     }

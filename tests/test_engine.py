@@ -125,6 +125,15 @@ class ComparisonTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             compare(expected, observed)
 
+    def test_replica_range_matches_deployed_iac(self):
+        # infra/workloads deploys 1 replica; the approved range must include it.
+        for replicas, status in ((1, "expected"), (4, "expected"), (5, "potential")):
+            expected, observed = scenario("clean")
+            observed["resources"][1]["attributes"]["replicas"] = replicas
+            finding = next(f for f in compare(expected, observed)["findings"]
+                           if f["field"] == "replicas")
+            self.assertEqual(finding["status"], status)
+
     def test_invalid_replica_type_rejected(self):
         data = baseline()
         data["resources"][1]["attributes"]["replicas"] = True

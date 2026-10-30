@@ -3,6 +3,21 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.4.0 — 2026-10-30
+
+Live drift exercise.
+
+### Changed
+
+- The fixture `approved_replica_range` is now `[1, 4]` (the engine default too),
+  matching the 1-replica Deployment in `infra/workloads`. The scaling text and the
+  GitHub push preview are updated to match.
+
+### Added
+
+- `test_replica_range_matches_deployed_iac` (50 tests total).
+- `artifacts/validation.md`: sanitized record of the live IAM and ServiceAccount
+  drift detection and reconciliation.
 ## 0.3.0 — 2026-10-29
 
 Phase 1 sandbox deployment (stacks up; teardown not yet proven).
