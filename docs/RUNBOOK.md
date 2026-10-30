@@ -27,7 +27,22 @@ python3 -m drift_lab import-plan <plan.json>
 The sanitizer keeps only hashed addresses, resource types, and change actions. Raw
 plans and state are never stored, displayed, or sent to a model.
 
-## Cloud operations (authorization-gated — not performed yet)
+## Cloud operations (authorization-gated)
+
+Phase 1 deployment record (2026-10-29): profile `demo-admin`, region `ca-central-1`.
+Use the commands below with `AWS_PROFILE=demo-admin AWS_REGION=ca-central-1`. The
+`workloads` stack ran from the operator laptop through the temporary `/32` public
+endpoint (`public_access_cidrs` in `eks-lab`). Lessons from the live run:
+
+- Read `terraform output` before copying `backend.tf` into `foundation`.
+  Otherwise Terraform demands init first, so derive the bucket name as
+  `drift-lab-<account>-tfstate`.
+- EKS access entries need the full SSO role ARN, including
+  `aws-reserved/sso.amazonaws.com/<region>/`.
+- If a Deployment rollout fails and the next plan reports "Unexpected Identity
+  Change", run `terraform state rm kubernetes_deployment_v1.preview`, delete the
+  empty Deployment, and re-apply.
+- Cluster access: `aws eks update-kubeconfig --name drift-lab --alias drift-lab`.
 
 Preconditions, in order:
 

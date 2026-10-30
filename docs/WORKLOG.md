@@ -2,6 +2,52 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-10-29 — Phase 1 deployment (0.3.0)
+
+### Done
+
+- Git: initialized `main` and made a GPG-signed first commit (`87f37a8`) with the
+  user's key. Created the public repository `GosYao/drift-lab` and pushed. Created
+  the `security-lab` environment.
+- AWS login via `aws sso login --profile demo-admin` (user-approved in the browser).
+- Account check (read-only) before any apply: the profile uses a corporate SSO start
+  URL, and the account is not empty. us-east-1 has 5 VPCs and 121 tagged
+  resources; ca-central-1 has 3 custom VPCs, 79 tagged resources, and an unrelated
+  EKS cluster. I raised this; the user chose to proceed in ca-central-1. There were
+  no name collisions. A GitHub OIDC provider already existed, so it is reused.
+- Verified the OIDC subject: repositories created after 2026-07-15 use immutable
+  subjects. The role trusts
+  `repo:GosYao@45461592/drift-lab@1439230701:environment:security-lab`.
+- Added an opt-in EKS public endpoint (`public_access_cidrs`, `/32` only; see the
+  ADR 0003 amendment) so the laptop can apply `workloads`.
+- `foundation`: planned 10 resources, applied, migrated state to S3, re-plan clean.
+- `eks-lab`: planned 32, applied 30. The access entry failed because EKS rejects
+  the path-less SSO role ARN (the "remove the path" advice applies to `aws-auth`,
+  not access entries). Re-applied the remaining 2 with the full ARN.
+- Image: built `linux/amd64` on a digest-pinned `python:3.12-slim`, pushed tag
+  `87f37a8` (digest `sha256:8351be12…`), and smoke-tested it locally read-only, as
+  UID 10001, with all capabilities dropped.
+- `workloads`: three fixes found only by a live apply.
+  1. The PSA `enforce-version` label must be `v1.36`, not `1.36`.
+  2. The Kubernetes provider writes container `runAsNonRoot: false` unless it is
+     set explicitly, so restricted Pod Security rejected the pod. Set
+     `run_as_non_root = true` on the container.
+  3. After the failed rollout, the provider hit an "Unexpected Identity Change" bug
+     on the tainted Deployment. Ran `state rm`, deleted the empty Deployment, and
+     re-created it.
+- Verified the pod, probes, Pod Identity, the enforced default-deny policy, and the
+  app via port-forward. All three stacks re-plan with exit 0.
+
+### Findings
+
+- Default-deny egress still allows pod -> local node kubelet (`:10250`).
+- ECR basic scan-on-push produced no scan; the account likely uses enhanced
+  (Inspector) scanning.
+
+### Not done
+
+- Teardown and the up -> down -> up proof; the live drift exercises; cost recording.
+- Removing the public endpoint `/32`.
 ## 2026-10-29 — GitHub-side previews (0.2.0)
 
 ### Done

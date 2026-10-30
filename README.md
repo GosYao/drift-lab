@@ -5,9 +5,10 @@ cloud checks. Droid does not replace scanners or Terraform. It orchestrates them
 connects findings to code and identity changes, validates evidence deterministically,
 and explains impact with a scoped, verified remediation.
 
-Everything here runs locally. **No AWS resource has been created, changed, or deleted
-by this project.** Cloud deployment is a separate, authorization-gated step documented
-in `docs/RUNBOOK.md`.
+The engine and UI run locally in fixture mode. A Phase 1 lab (EKS in `ca-central-1`)
+has been deployed with explicit authorization; see `docs/STATUS.md` for what is live
+and what is not. Cloud steps are authorization-gated and documented in
+`docs/RUNBOOK.md`.
 
 ## What the prototype demonstrates
 
@@ -22,7 +23,7 @@ in `docs/RUNBOOK.md`.
 - A local preview UI with the graph, findings, a written brief, scenario replay,
   and JSON export.
 - Three Terraform stacks (foundation, EKS lab, workloads) with an explicit security
-  baseline, validated locally, not yet applied.
+  baseline, applied in a sandbox lab (teardown proof pending).
 
 ## Quick start
 

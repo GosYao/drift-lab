@@ -1,5 +1,8 @@
 region              = "us-east-1"
 account_id          = "REPLACE_WITH_SANDBOX_ACCOUNT"
-github_oidc_subject = "repo:REPLACE_ORG/REPLACE_CONTROL_REPO:environment:security-lab"
-# Existing providers and newer GitHub immutable subjects must be inspected.
+# Repositories created after 2026-07-15 use immutable subjects. Read the exact prefix with:
+#   gh api repos/OWNER/REPO/actions/oidc/customization/sub
+github_oidc_subject = "repo:REPLACE_OWNER@OWNER_ID/REPLACE_REPO@REPO_ID:environment:security-lab"
+# Reuse an existing account-level GitHub provider instead of creating a duplicate:
+# existing_github_oidc_provider_arn = "arn:aws:iam::REPLACE_ACCOUNT:oidc-provider/token.actions.githubusercontent.com"
 monthly_budget_usd = 500

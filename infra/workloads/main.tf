@@ -4,7 +4,7 @@ resource "kubernetes_namespace_v1" "demo" {
     labels = {
       "app.kubernetes.io/part-of"                  = "drift-lab"
       "pod-security.kubernetes.io/enforce"         = "restricted"
-      "pod-security.kubernetes.io/enforce-version" = data.aws_eks_cluster.lab.version
+      "pod-security.kubernetes.io/enforce-version" = "v${data.aws_eks_cluster.lab.version}"
     }
   }
 }
@@ -125,7 +125,10 @@ resource "kubernetes_deployment_v1" "preview" {
             requests = { cpu = "100m", memory = "64Mi" }
             limits   = { cpu = "500m", memory = "256Mi" }
           }
+          # The provider sends run_as_non_root = false unless set here, which
+          # overrides the pod-level value and fails restricted Pod Security.
           security_context {
+            run_as_non_root            = true
             allow_privilege_escalation = false
             read_only_root_filesystem  = true
             capabilities {

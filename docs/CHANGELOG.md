@@ -3,6 +3,27 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.3.0 — 2026-10-29
+
+Phase 1 sandbox deployment (stacks up; teardown not yet proven).
+
+### Added
+
+- `infra/eks-lab`: `public_access_cidrs` variable (default `[]`, `/32`-only
+  validation) for temporary operator access to the EKS API.
+- `infra/foundation/backend.tf` (S3 backend, after the local-state bootstrap).
+
+### Fixed
+
+- `infra/workloads`: the Pod Security `enforce-version` label now uses the `v1.x` form.
+- `infra/workloads`: the container sets `run_as_non_root = true`, so pods pass
+  restricted Pod Security (the provider otherwise sends `false`).
+- tfvars examples: the immutable GitHub OIDC subject format, reuse of an existing
+  OIDC provider, and the full-path ARN for SSO roles in EKS access entries.
+
+### Deployed
+
+- foundation (10), eks-lab (32), and workloads (14) in `ca-central-1`. All re-plan clean.
 ## 0.2.0 — 2026-10-29
 
 GitHub-side fixture previews.

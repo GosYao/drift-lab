@@ -51,3 +51,13 @@ variable "instance_type" {
   type    = string
   default = "t3.medium"
 }
+
+variable "public_access_cidrs" {
+  type        = list(string)
+  default     = []
+  description = "Temporary operator /32 allowlist for the EKS API. Empty keeps the endpoint private-only."
+  validation {
+    condition     = alltrue([for cidr in var.public_access_cidrs : can(cidrhost(cidr, 0)) && endswith(cidr, "/32")])
+    error_message = "Only single-host /32 CIDRs are allowed; never 0.0.0.0/0."
+  }
+}

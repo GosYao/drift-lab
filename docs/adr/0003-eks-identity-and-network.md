@@ -46,3 +46,14 @@ default.
 - **Kubelet probes (readiness/liveness against `/api/health`) under default-deny
   ingress are untested until deployed.** Phase 1 must verify probes, addon startup,
   and Pod Identity association end-to-end before the demo is trusted.
+
+## Amendment (2026-10-29): opt-in operator endpoint
+
+- `infra/eks-lab` gains `public_access_cidrs` (default `[]`). When it's empty, the
+  endpoint stays private-only. When it's set, the public endpoint is enabled for
+  those CIDRs only. Validation rejects anything except single-host `/32` entries.
+- Reason: the Phase 1 operator applies `workloads` from a laptop that has no route
+  into the VPC. The temporary `/32` replaces a bastion or runner for this lab.
+  Remove it (set `[]` and re-apply) once an in-VPC runner exists.
+- Private access stays enabled, so nodes and Pod Identity never use the public path.
+- The deployed lab runs in `ca-central-1`, by the user's choice.
