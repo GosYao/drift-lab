@@ -3,6 +3,25 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.7.1 — 2026-10-30
+
+CI catch: Semgrep flagged the Droid CLI install step's `curl | sh` pattern
+(`gha-curl-pipe-shell`) in the new workflow itself — the one file local
+pre-verification could not cover, because it did not exist when the scanners
+were pre-verified. Accepted inline with rationale: the vendor-documented
+install path, over TLS from the vendor's own domain, on an ephemeral runner,
+in a job whose only credential is the FACTORY_API_KEY that same vendor issued.
+Download-then-exec would hide the identical trust from the scanner without
+reducing it; the inline annotation keeps the acceptance visible at the source
+line.
+
+The seeded verification PR (#1, support-role read broadening from 0.6.0) ran
+the workflow live: `make check`, terraform fmt/validate, Trivy, and the Droid
+availability gate passed; the capability-intent gate failed on exactly
+`support-agent must read only the customer-orders table` (the other four
+runs passed); the Droid review and posting jobs skipped while
+`FACTORY_API_KEY` is unset.
+
 ## 0.7.0 — 2026-10-30
 
 GitHub Actions pull-request workflow with credential-separated Droid review.

@@ -160,7 +160,12 @@ jobs:
             tail -n 80 /tmp/policy.log
           } > /tmp/deterministic-outcomes.md
       - name: Install Droid CLI
-        run: |
+        # Accepted risk (triage record in docs/WORKLOG.md, 0.7.1): the
+        # vendor-documented install path, over TLS from the vendor's own
+        # domain, in an ephemeral job that holds only the FACTORY_API_KEY the
+        # same vendor issued. Download-then-exec would hide this trust from
+        # the scanner without changing it.
+        run: | # nosemgrep: yaml.github-actions.security.gha-curl-pipe-shell.gha-curl-pipe-shell
           curl -fsSL https://app.factory.ai/cli | sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           "$HOME/.local/bin/droid" --version

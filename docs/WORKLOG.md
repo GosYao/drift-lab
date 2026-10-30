@@ -2,6 +2,52 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-10-30 — First live PR run: the scanner caught the pipeline itself (0.7.1)
+
+### Done
+
+- Opened verification PR #1, seeded with the 0.6.0 support-role read
+  broadening (deliberate regression, never to be merged). First live run of
+  the 0.7.0 workflow:
+  - `make check`: pass
+  - `terraform-check + policy-test`: fail — run
+    `support_agent_reads_only_orders` fails on "support-agent must read only
+    the customer-orders table"; the other four capability runs pass
+  - `trivy`: pass
+  - `droid availability`: pass (it reports only whether FACTORY_API_KEY is
+    configured, never the value)
+  - `droid review (read-only)` and `post droid review`: skipped, as designed
+  - `semgrep`: fail — a real finding, below
+- The Semgrep finding: `gha-curl-pipe-shell` on the new workflow's Droid CLI
+  install step. Local pre-verification on 0.7.0 could not see it: the scanner
+  ran before the workflow file existed. CI scanning the new file activated the
+  yaml.github-actions rules (286 to 310 rules, 54 to 56 files) and the pattern
+  matched. The deterministic scanner caught a genuine supply-chain pattern in
+  the very change that introduced the scanning — the prototype's thesis
+  applied to itself.
+
+### Decision
+
+- Accepted inline (annotation on the `run: |` match line, rationale in the
+  workflow): the Factory CLI install is the vendor's documented path, over
+  TLS from the vendor's own domain, on an ephemeral runner, in a job whose
+  only credential is the FACTORY_API_KEY that same vendor issued.
+  Download-then-exec would hide the identical trust from the scanner without
+  reducing it — a scanner pass bought by laundering the pattern. The inline
+  annotation keeps the acceptance visible at the source line instead.
+- Not chosen: `--skip-rule` (would silence the pattern for future workflow
+  files too) and download-then-exec (security theater: semgrep passes while the
+  same script still executes).
+- Annotation placement: the rule matches the whole `run:` block, so the
+  annotation goes on the `run: |` line — the first line of the match — not
+  the `curl` line. Same lesson as 0.7.0's KMS annotation: the ID in the
+  annotation must be the full rule ID, and the line must be the match start.
+
+### Not done
+
+- The verification PR still needs a re-trigger against annotated main to show
+  the final matrix (all gates green except the seeded policy failure).
+
 ## 2026-10-30 — Pull-request workflow with credential-separated Droid review (0.7.0)
 
 ### Done
