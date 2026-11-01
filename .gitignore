@@ -18,5 +18,9 @@ artifacts/*
 !artifacts/preview-mobile.png
 !artifacts/validation.md
 !artifacts/github-preview-*.png
+!artifacts/demo-interactive.html
+!artifacts/drift-lab-demo.pptx
 node_modules/
+tmp/
+outputs/
 .policy-test-tmp/

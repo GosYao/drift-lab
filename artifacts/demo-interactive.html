@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drift Lab — interactive demo</title>
+<meta name="description" content="Drift Lab: where agents earn their cost on top of deterministic scanners.">
+<!--
+  Self-contained interactive demo for the Drift Lab walkthrough (docs/DEMO.md).
+  No external resources, no network calls, no analytics. All check-run and
+  review content below is a REPRODUCTION of recorded evidence from seeded
+  verification PR #1 (never merged; run 41073964551, 2026-10-30) and is labeled
+  as such. Nothing here is live AWS data. Fixture and reproduction labels are
+  deliberate honesty boundaries, not decoration.
+-->
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --panel2: #1c2129; --line: #30363d;
+    --fg: #e6edf3; --dim: #9199a1; --accent: #58a6ff; --accent2: #f0883e;
+    --pass: #3fb950; --fail: #f85149; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); }
+  header {
+    position: sticky; top: 0; z-index: 10; background: rgba(13,17,23,.92);
+    border-bottom: 1px solid var(--line); backdrop-filter: blur(6px);
+  }
+  .bar { display: flex; align-items: center; gap: 12px; padding: 12px 22px; flex-wrap: wrap; }
+  .logo { font-weight: 700; letter-spacing: .3px; }
+  .logo span { color: var(--accent2); }
+  nav { display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
+  nav button {
+    background: none; border: 1px solid transparent; border-radius: 8px; color: var(--dim);
+    font: 600 13px/1.2 var(--sans); padding: 8px 12px; cursor: pointer;
+  }
+  nav button:hover { color: var(--fg); border-color: var(--line); }
+  nav button[aria-current="true"] { color: var(--fg); background: var(--panel2); border-color: var(--line); }
+  main { max-width: 1060px; margin: 0 auto; padding: 34px 22px 90px; }
+  section.panel { display: none; }
+  section.panel.active { display: block; animation: fade .25s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  h1 { font-size: 42px; line-height: 1.15; margin: 8px 0 14px; }
+  h2 { font-size: 26px; margin: 26px 0 10px; }
+  h3 { font-size: 17px; margin: 0 0 8px; }
+  p { font-size: 16.5px; line-height: 1.65; color: var(--fg); }
+  .lead { font-size: 20px; color: var(--dim); }
+  .tag { color: var(--accent); font-weight: 700; }
+  .tag2 { color: var(--accent2); font-weight: 700; }
+  .grid { display: grid; gap: 16px; }
+  .grid.two { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .grid.three { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px;
+  }
+  .card .kicker { color: var(--dim); font-size: 12.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; margin-bottom: 8px; }
+  .quote {
+    border-left: 4px solid var(--accent2); background: var(--panel);
+    padding: 16px 20px; border-radius: 0 12px 12px 0; font-size: 18.5px; line-height: 1.6; margin: 18px 0;
+  }
+  .note { color: var(--dim); font-size: 13.5px; line-height: 1.5; }
+  .repro {
+    display: inline-flex; align-items: center; gap: 6px; font: 700 11.5px/1 var(--sans);
+    letter-spacing: .5px; text-transform: uppercase; color: var(--accent2);
+    border: 1px solid var(--accent2); border-radius: 999px; padding: 5px 10px;
+  }
+  .mono { font-family: var(--mono); font-size: 13.5px; }
+  pre {
+    background: #0a0e14; border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; overflow-x: auto; margin: 12px 0; line-height: 1.55;
+  }
+  pre .del { color: #f8514980; text-decoration: line-through; text-decoration-color: #f8514960; }
+  pre .add { color: #3fb950; }
+  pre .ctx { color: var(--dim); }
+  .verdict { font-weight: 800; letter-spacing: .3px; }
+  .pass { color: var(--pass); } .fail { color: var(--fail); }
+  .badge { border-radius: 999px; font-size: 12px; font-weight: 700; padding: 3px 10px; }
+  .badge.pass { background: #12261c; color: var(--pass); border: 1px solid #1f4d2e; }
+  .badge.fail { background: #2d1416; color: var(--fail); border: 1px solid #6e2226; }
+  .badge.skipped { background: #1c2129; color: var(--dim); border: 1px solid var(--line); }
+  /* Why accordion */
+  .why { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); overflow: hidden; }
+  .why + .why { margin-top: 12px; }
+  .why button.head {
+    width: 100%; display: flex; align-items: center; gap: 14px; text-align: left;
+    background: none; border: 0; color: var(--fg); padding: 16px 18px; cursor: pointer;
+    font: 700 16.5px/1.3 var(--sans);
+  }
+  .why .num { color: var(--accent2); font-size: 13px; font-weight: 800; letter-spacing: 1px; white-space: nowrap; }
+  .why .chev { margin-left: auto; color: var(--dim); transition: transform .2s; }
+  .why.open .chev { transform: rotate(90deg); }
+  .why .body { display: none; padding: 0 18px 16px 18px; border-top: 1px solid var(--line); }
+  .why.open .body { display: block; }
+  .why .body p { margin: 12px 0 0; }
+  /* Walkthrough stepper */
+  .steps { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0; }
+  .steps button {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; color: var(--dim);
+    font: 600 13px/1.2 var(--sans); padding: 10px 14px; cursor: pointer;
+  }
+  .steps button[aria-current="true"] { color: var(--fg); border-color: var(--accent); background: #101a2c; }
+  .stepbox { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 22px 24px; min-height: 260px; }
+  .meta { color: var(--dim); font-size: 13px; margin-bottom: 10px; }
+  /* Gate explorer */
+  .gates { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin: 16px 0; }
+  .gates button {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 12px;
+    color: var(--fg); font: 700 14px/1.3 var(--sans); cursor: pointer; text-align: center;
+  }
+  .gates button small { display: block; color: var(--dim); font-weight: 500; margin-top: 4px; font-size: 11.5px; }
+  .gates button:hover { border-color: var(--accent); }
+  .gates button.sel { border-color: var(--accent); background: #101a2c; }
+  .gates button.picked.pass { border-color: #1f4d2e; }
+  .gates button.picked.fail { border-color: #6e2226; }
+  #gateDetail { border: 1px solid var(--line); border-radius: 12px; background: var(--panel2); padding: 18px 20px; min-height: 150px; }
+  #gateDetail .title { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; margin-bottom: 8px; flex-wrap: wrap; }
+  /* Review comment reproduction */
+  .comment { border: 1px solid var(--line); border-radius: 12px; background: var(--panel2); padding: 18px 20px; margin-top: 12px; }
+  .comment .chead { display: flex; align-items: center; gap: 10px; color: var(--dim); font-size: 12.5px; margin-bottom: 10px; flex-wrap: wrap; }
+  .comment h3 { font-size: 15.5px; }
+  .comment ul { margin: 8px 0 8px 20px; padding: 0; }
+  .comment li { font-size: 14.5px; line-height: 1.55; margin-bottom: 7px; }
+  .verdictline {
+    margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 12px;
+    font-family: var(--mono); font-size: 14px; color: var(--fail); font-weight: 700;
+  }
+  /* Benefits table */
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14.5px; }
+  th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.5; }
+  th { color: var(--dim); font-size: 12.5px; text-transform: uppercase; letter-spacing: .6px; }
+  td:first-child { font-weight: 700; white-space: nowrap; }
+  /* Boundaries */
+  .bound { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .bound:last-child { border-bottom: 0; }
+  .bound .dot { color: var(--accent2); font-weight: 800; }
+  footer { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 16px; }
+  kbd { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; font: 700 12px var(--mono); }
+  a { color: var(--accent); }
+  @media (max-width: 640px) { h1 { font-size: 30px; } .lead { font-size: 17px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <div class="logo">Drift<span>&nbsp;Lab</span></div>
+    <nav id="nav" aria-label="Demo sections">
+      <button data-panel="overview" aria-current="true">Overview</button>
+      <button data-panel="whys">The 3 Whys</button>
+      <button data-panel="walkthrough">Walkthrough</button>
+      <button data-panel="gates">Gate lab</button>
+      <button data-panel="benefits">Benefits</button>
+      <button data-panel="boundaries">Boundaries</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ OVERVIEW ============ -->
+<section class="panel active" id="overview" aria-label="Overview">
+  <span class="repro">Reproduces recorded evidence &middot; seeded PR #1 &middot; never merged</span>
+  <h1>One red check.<br>Every vendor scanner: <span class="pass">green</span>.</h1>
+  <p class="lead">Drift Lab shows where an agent earns its cost on top of deterministic
+  scanners: a real AWS lab where a policy-as-code gate catches a capability broadening
+  that commodity scans passed, and a read-only Droid review explains it — with the exact
+  failing assertion, a classification, and a verified fix path — in 57 seconds, with zero
+  cloud credentials.</p>
+
+  <div class="quote">
+    Detection is solved. What costs money is turning findings into decisions, and
+    decisions into <span class="tag">verified fixes</span>. That is the 57 seconds you
+    are about to see.
+  </div>
+
+  <div class="grid three" style="margin-top:22px">
+    <div class="card">
+      <div class="kicker">The lab</div>
+      Live EKS cluster in ca-central-1, three Terraform stacks, GPG-signed commits,
+      read-only collector, budget alert. Not a mockup.
+    </div>
+    <div class="card">
+      <div class="kicker">The gates</div>
+      75 tests + contracts, capability-intent Terraform tests with mock providers,
+      Semgrep and Trivy from digest-pinned images — all credential-free in CI.
+    </div>
+    <div class="card">
+      <div class="kicker">The agent</div>
+      Read-only <span class="mono">droid exec</span> review, posted by a separate job
+      that holds only a GitHub token. It cites gates; it cannot override them.
+    </div>
+  </div>
+
+  <p class="note" style="margin-top:22px">
+    This page reproduces recorded evidence: seeded verification PR #1
+    (github.com/GosYao/drift-lab/pull/1, CI run 41073964551, 2026-10-30) and commits
+    c0fea7f / 2362d1f / 7bf7c31. Nothing here is live AWS data.
+    Navigate with the tabs above or <kbd>←</kbd> <kbd>→</kbd>.
+  </p>
+</section>
+
+<!-- ============ 3 WHYS ============ -->
+<section class="panel" id="whys" aria-label="The three Whys">
+  <h1>Three Whys</h1>
+  <p class="lead">The background in three questions, each answered with evidence from the lab.</p>
+
+  <div class="why" id="why1">
+    <button class="head" aria-expanded="false" aria-controls="why1b">
+      <span class="num">WHY 1</span>
+      Why does drift keep happening even though we write IaC?
+      <span class="chev">&#8250;</span>
+    </button>
+    <div class="body" id="why1b">
+      <p><b>Intent lives in more places than code.</b> Terraform encodes <i>what</i>
+      exists; it does not encode <i>why this role may read only this table</i>. That
+      capability intent traditionally lives in review approvals, tribal memory, and
+      runbooks. Anything not encoded somewhere checkable drifts silently.</p>
+      <p>This lab encodes it as policy-as-code: five Terraform test runs with mock
+      providers asserting the support agent reads only customer-orders, identity pinning,
+      workload hardening, and namespace isolation — verified in
+      <span class="mono">infra/workloads/policy.tftest.hcl</span>, running credential-free
+      in every PR.</p>
+    </div>
+  </div>
+
+  <div class="why" id="why2">
+    <button class="head" aria-expanded="false" aria-controls="why2b">
+      <span class="num">WHY 2</span>
+      Why don't the scanners we already pay for stop it?
+      <span class="chev">&#8250;</span>
+    </button>
+    <div class="body" id="why2b">
+      <p><b>Two reasons, both demonstrated here.</b></p>
+      <p><b>1. Generic rules, not your intent.</b> The seeded support-role broadening —
+      support-agent silently gaining read on customer-archive — <b>passed</b> the external
+      Lacework IAC and SCA checks on the same PR where the intent-encoded gate failed it.
+      One seeded case, recorded factually: compliance packs check industry rules; they do
+      not carry your intent.</p>
+      <p><b>2. Noise.</b> Raw plan output buries the two lines that matter under version
+      fields, null-vs-empty churn, and IAM mirror updates. The sanitizer exists because
+      triage cost is set by noise — and noise is a deterministic problem you can engineer
+      away (changed-attribute paths, version filters, mirror collapse).</p>
+    </div>
+  </div>
+
+  <div class="why" id="why3">
+    <button class="head" aria-expanded="false" aria-controls="why3b">
+      <span class="num">WHY 3</span>
+      Why does an agent change the economics instead of just adding cost?
+      <span class="chev">&#8250;</span>
+    </button>
+    <div class="body" id="why3b">
+      <p><b>The expensive part was never detection; it is the human loop</b> — connect
+      finding, change, intent, fix, proof.</p>
+      <p>The demo's division of labor answers the objection: <b>deterministic checks make
+      the trust decision, and the agent does the correlation and explanation.</b> The agent
+      cannot override a gate, cannot fabricate evidence, and in this pipeline holds no
+      credential that can touch anything: the review job has no GitHub token, and the
+      posting job has no Factory key.</p>
+      <p>The trust model stays deterministic; the labor cost collapses — 57 seconds for
+      the review job in the recorded run.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WALKTHROUGH ============ -->
+<section class="panel" id="walkthrough" aria-label="Live walkthrough">
+  <h1>The walkthrough</h1>
+  <p class="lead">Six moves, with recorded timings. Present against the live PR; this page is the offline rehearsal.</p>
+
+  <div class="steps" id="stepnav" role="tablist"></div>
+  <div class="stepbox" id="stepbox" role="tabpanel"></div>
+</section>
+
+<!-- ============ GATE LAB ============ -->
+<section class="panel" id="gates" aria-label="Gate lab">
+  <h1>Gate lab</h1>
+  <p class="lead">The seeded change, and every gate's recorded verdict. Click a gate.</p>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="kicker">The seeded change &middot; infra/workloads/main.tf &middot; commit dfd7e04</div>
+    <p style="margin:0 0 4px">The support-agent inline policy drops its read-scope
+    conditional and gains the <span class="mono">customer-archive</span> table:</p>
+<pre><span class="ctx">  # before: support-agent reads only orders</span>
+<span class="del">  Resource = each.key == "support-agent" ? [ orders.arn ] : [ orders.arn, archive.arn ]</span>
+<span class="ctx">  # after (the seeded broadening)</span>
+<span class="add">  Resource = [ orders.arn, archive.arn ]   # everyone reads everything</span></pre>
+  </div>
+
+  <div class="gates" id="gategrid" role="tablist"></div>
+  <div id="gateDetail" role="tabpanel" aria-live="polite"></div>
+
+  <p class="note" style="margin-top:16px">
+    Verdicts reproduce the recorded CI run (41073964551) on PR #1. The external Lacework
+    checks are shown as observed on that PR: pass. One seeded case — the point is the
+    mechanism, not a tool comparison. The capability gate runs against mock providers:
+    no cloud credentials, no AWS access.
+  </p>
+</section>
+
+<!-- ============ BENEFITS ============ -->
+<section class="panel" id="benefits" aria-label="Benefit analysis">
+  <h1>Technical and business benefit</h1>
+  <p class="lead">Every row traces to a commit, a recorded run, or a documented decision.</p>
+
+  <table>
+    <thead><tr><th>Dimension</th><th>What the demo showed</th><th>Business translation</th></tr></thead>
+    <tbody>
+      <tr><td>Noise engineering</td><td>Sanitizer v2: changed-attribute paths, version churn and IAM mirror collapse</td><td>Triage reads meaningful lines, not raw plan JSON; triage cost engineered down deterministically</td></tr>
+      <tr><td>Intent as code</td><td>5 capability tests, mock providers, credential-free; seeded broadening fails them</td><td>Every PR checks intent pre-merge at near-zero marginal cost; no AWS credentials in PR checks</td></tr>
+      <tr><td>Detection vs explanation</td><td>Gates decide; agent cites, classifies, gives fix path and verdict</td><td>Senior-reviewer-quality triage in 57s, auditable, non-fabricating</td></tr>
+      <tr><td>Cross-tool delta</td><td>External IAC/SCA checks passed the seeded broadening; the lab's own gate failed it</td><td>Your intent is a differentiator no vendor product carries (one seeded case, not a generalization)</td></tr>
+      <tr><td>Supply chain</td><td>Pinned actions and digests, signed commits, read-only collector, sanitized snapshots</td><td>No account IDs or raw state leave the repo; findings shareable without redaction work</td></tr>
+      <tr><td>Credential separation</td><td>Factory key and GitHub token never co-located; review job read-only</td><td>The agent adds capability without adding blast radius — the auditable answer to agent risk</td></tr>
+      <tr><td>Cost control</td><td>Lab at $5–7/day under a $500 budget alert; agent arm no-ops without the key</td><td>Agent spend is a gate, not a leak; the lab costs less than one incident triage hour</td></tr>
+    </tbody>
+  </table>
+
+  <h2>The metric: cost per verified fix</h2>
+  <p>A fix counts as <span class="tag">verified</span> only when it passes deterministic
+  re-verification — the agent's own review states the criterion. The recorded run gives
+  the numerator's ingredients: <b>57 seconds</b> of agent review, seconds of pinned
+  scanners, zero cloud credentials.</p>
+  <p>The benchmark phase measures it properly across arms — scanners-only, plus ordinary
+  Droid review, plus policy-as-code plus Droid — so the claim becomes a number instead of
+  an anecdote. That phase is designed, not yet measured.</p>
+
+  <div class="quote">
+    cost per verified fix = (scanner minutes + agent credits) ÷ fixes that pass
+    deterministic re-verification
+  </div>
+</section>
+
+<!-- ============ BOUNDARIES ============ -->
+<section class="panel" id="boundaries" aria-label="Honest boundaries">
+  <h1>Honest boundaries</h1>
+  <p class="lead">Stated on stage. They close objections; they are not fine print.</p>
+
+  <div class="card">
+    <div class="bound"><span class="dot">&#9632;</span><div><b>One seeded case.</b> No
+    generalization beyond it, no competitor-parity claims. The mechanism is the finding,
+    not a leaderboard.</div></div>
+    <div class="bound"><span class="dot">&#9632;</span><div><b>The UI is fixture replay.</b>
+    The local preview replays synthetic fixtures; live collection today is the CLI
+    (<span class="mono">python -m drift_lab collect</span>). Wiring it into the UI is next.</div></div>
+    <div class="bound"><span class="dot">&#9632;</span><div><b>The benchmark is designed,
+    not yet measured.</b> Cost per verified fix is the next phase's number, not today's claim.</div></div>
+    <div class="bound"><span class="dot">&#9632;</span><div><b>No automatic reconciliation.</b>
+    Drift is detected and explained; remediation stays authorized human work.</div></div>
+    <div class="bound"><span class="dot">&#9632;</span><div><b>The agent never holds trust.</b>
+    A model may explain evidence; it cannot fabricate graph edges or make the trusted
+    validation decision. That decision stays with the deterministic gates.</div></div>
+  </div>
+
+  <div class="quote" style="margin-top:26px">
+    Detection is solved — we proved it by making our own gate catch what the vendor
+    scanners passed. What is not solved is turning findings into decisions, and decisions
+    into verified fixes. That is the 57 seconds you just saw — and it is why the next
+    phase measures <span class="tag">cost per verified fix</span>.
+  </div>
+
+  <footer>
+    <p class="note">
+      Drift Lab interactive demo &middot; companion to <span class="mono">docs/DEMO.md</span>
+      &middot; evidence: PR #1, CI run 41073964551, commits c0fea7f / 2362d1f / 7bf7c31
+      &middot; self-contained page: no network calls, no analytics, no external fonts.
+    </p>
+  </footer>
+</section>
+
+</main>
+
+<script>
+"use strict";
+// Panel navigation -----------------------------------------------------------
+var nav = document.getElementById("nav");
+var panels = Array.prototype.slice.call(document.querySelectorAll("section.panel"));
+var order = ["overview", "whys", "walkthrough", "gates", "benefits", "boundaries"];
+
+function show(name) {
+  panels.forEach(function (p) { p.classList.toggle("active", p.id === name); });
+  Array.prototype.forEach.call(nav.querySelectorAll("button"), function (b) {
+    b.setAttribute("aria-current", String(b.dataset.panel === name));
+  });
+  window.scrollTo(0, 0);
+}
+Array.prototype.forEach.call(nav.querySelectorAll("button"), function (b) {
+  b.addEventListener("click", function () { show(b.dataset.panel); });
+});
+document.addEventListener("keydown", function (e) {
+  if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  var cur = order.indexOf(order.filter(function (id) {
+    return document.getElementById(id).classList.contains("active");
+  })[0]);
+  if (e.key === "ArrowRight") show(order[Math.min(cur + 1, order.length - 1)]);
+  if (e.key === "ArrowLeft") show(order[Math.max(cur - 1, 0)]);
+});
+
+// Why accordions -------------------------------------------------------------
+Array.prototype.forEach.call(document.querySelectorAll(".why button.head"), function (b) {
+  b.addEventListener("click", function () {
+    var w = b.parentElement;
+    var open = w.classList.toggle("open");
+    b.setAttribute("aria-expanded", String(open));
+  });
+});
+
+// Walkthrough steps ----------------------------------------------------------
+var steps = [
+  {
+    t: "1. The gate goes red on intent", time: "2 min",
+    body: "<p>Open PR #1's checks. <span class='mono'>policy-test</span> fails on exactly "
+      + "<b>&ldquo;support-agent must read only the customer-orders table&rdquo;</b> "
+      + "(4 runs pass, 1 fails). <span class='mono'>make check</span>, Semgrep, Trivy: green.</p>"
+      + "<p><b>Say:</b> everything a commodity scanner can see is fine here. The only thing "
+      + "that caught it is encoded intent — because the intent is ours. No vendor has it.</p>"
+      + "<p class='note'>Optional contrast on the same PR: external Lacework IAC and SCA checks, green.</p>"
+  },
+  {
+    t: "2. The agent's review, already posted", time: "3 min",
+    body: "<div class='comment'><div class='chead'><span class='repro'>Reproduction</span>"
+      + "github-actions comment on PR #1 &middot; recorded 2026-10-30</div>"
+      + "<h3>[P1] Restore support-agent's orders-only scope</h3>"
+      + "<ul><li>Cites the gate by name, run, exact assertion condition and text — "
+      + "it explains the verdict, it does not issue one.</li>"
+      + "<li>Classifies: a <b>proposed intent change</b>, not out-of-band drift, not noise — "
+      + "an approved expansion would require updating the capability baseline, and this seed does not.</li>"
+      + "<li>Refuses to overclaim: the evidence is mock-provider verification, not live AWS access.</li>"
+      + "<li>Verified fix path: restore the conditional, re-run <span class='mono'>make policy-test</span>, "
+      + "all five runs pass without weakening an assertion.</li></ul>"
+      + "<div class='verdictline'>VERDICT: request changes</div></div>"
+  },
+  {
+    t: "3. The self-application moment", time: "1 min",
+    body: "<p>CI Semgrep caught the <span class='mono'>curl | sh</span> install pattern in the "
+      + "workflow itself — the one file local pre-verification could not cover, because it did "
+      + "not exist yet (0.7.1).</p>"
+      + "<p>The deterministic scanner caught the agent pipeline; agent-plus-human triaged it: "
+      + "accepted inline with rationale at the source line, recorded in the WORKLOG.</p>"
+      + "<p><b>Say:</b> scanner finds, human decides, agent documents — working on itself.</p>"
+  },
+  {
+    t: "4. The trust architecture", time: "1 min",
+    body: "<p>The answer to &ldquo;isn't an agent in CI dangerous?&rdquo;</p>"
+      + "<ul style='margin-left:20px'><li>The review job holds only <span class='mono'>FACTORY_API_KEY</span>, "
+      + "no GitHub token, and runs <span class='mono'>droid exec</span> read-only by default.</li>"
+      + "<li>A separate job holding only <span class='mono'>GITHUB_TOKEN</span> (pull-requests: write) posts the review.</li>"
+      + "<li>No job can both decide and publish; the availability gate exposes a boolean, never the key.</li>"
+      + "<li>CI never plans or applies against AWS; actions pinned by SHA, scanner images by digest; every commit GPG-signed.</li></ul>"
+  },
+  {
+    t: "5. The local UI", time: "30 sec",
+    body: "<p><span class='mono'>make preview</span> &rarr; http://127.0.0.1:8765 — the GitHub-view "
+      + "preview and scenario reports.</p>"
+      + "<p><b>Be explicit:</b> this panel replays synthetic fixtures; live collection today is the "
+      + "CLI (<span class='mono'>python -m drift_lab collect</span>), and wiring it into the UI is next. "
+      + "Honest boundaries read as strength.</p>"
+  },
+  {
+    t: "6. Close on the metric", time: "30 sec",
+    body: "<div class='quote' style='margin:10px 0'>Detection is solved — we proved it by making "
+      + "our own gate catch what the vendor scanners passed. What is not solved is turning findings "
+      + "into decisions, and decisions into verified fixes. That is the 57 seconds you just saw — "
+      + "and it is why the next phase measures cost per verified fix.</div>"
+      + "<p class='note'>Recorded timings: semgrep 19–26s &middot; trivy 15–18s &middot; policy-test ~50s "
+      + "&middot; droid review job 57s &middot; posting job 5s.</p>"
+  }
+];
+
+var stepnav = document.getElementById("stepnav");
+var stepbox = document.getElementById("stepbox");
+steps.forEach(function (s, i) {
+  var b = document.createElement("button");
+  b.setAttribute("role", "tab");
+  b.textContent = s.t + "  (" + s.time + ")";
+  b.addEventListener("click", function () { showStep(i); });
+  stepnav.appendChild(b);
+});
+function showStep(i) {
+  Array.prototype.forEach.call(stepnav.children, function (b, j) {
+    b.setAttribute("aria-current", String(j === i));
+  });
+  stepbox.innerHTML = "<div class='meta'>Step " + (i + 1) + " of " + steps.length
+    + " &middot; " + steps[i].time + "</div>" + steps[i].body;
+}
+showStep(0);
+
+// Gate explorer --------------------------------------------------------------
+var gates = [
+  { n: "make check", sub: "unit + contracts", v: "pass", d: "75 tests plus repository contracts, exit 0 in 8s. The seeded change is valid code — application health is not the issue.", t: "~8s" },
+  { n: "terraform-check", sub: "fmt + validate", v: "pass", d: "Valid HCL, formatting clean. Structure is not the issue either.", t: "~6s" },
+  { n: "semgrep", sub: "OWASP Top 10", v: "pass", d: "310 rules over 56 files, 0 findings. The broadening is not a vulnerability pattern — nothing is exploitable, nothing is secret-shaped.", t: "19–26s" },
+  { n: "trivy", sub: "vuln + secret", v: "pass", d: "No vulnerabilities, no secrets. Clean from a supply-chain view.", t: "15–18s" },
+  { n: "Lacework IAC", sub: "external check", v: "pass", d: "No violations found (as observed on the PR). Generic compliance packs check industry rules — not this lab's capability intent.", t: "as observed" },
+  { n: "Lacework SCA", sub: "external check", v: "pass", d: "No vulnerabilities found (as observed on the PR).", t: "as observed" },
+  { n: "policy-test", sub: "capability intent", v: "fail",
+    d: "<b>support_agent_reads_only_orders — 4 passed, 1 failed.</b><br>Assertion: "
+      + "<span class='mono'>jsondecode(aws_iam_role_policy.agent[\"support-agent\"].policy).Statement[0].Resource "
+      + "== [aws_dynamodb_table.synthetic[\"customer-orders\"].arn]</span><br>"
+      + "&ldquo;support-agent must read only the customer-orders table.&rdquo;<br>"
+      + "Mock providers, credential-free: the gate needs no AWS access to know the intent changed.", t: "~50s" }
+];
+
+var gategrid = document.getElementById("gategrid");
+var gateDetail = document.getElementById("gateDetail");
+gates.forEach(function (g) {
+  var b = document.createElement("button");
+  b.setAttribute("role", "tab");
+  b.innerHTML = g.n + "<small>" + g.sub + " &middot; " + g.t + "</small>";
+  b.addEventListener("click", function () { showGate(g, b); });
+  gategrid.appendChild(b);
+});
+function showGate(g, btn) {
+  Array.prototype.forEach.call(gategrid.children, function (c) {
+    c.classList.remove("sel");
+  });
+  btn.classList.add("sel", "picked", g.v);
+  gateDetail.innerHTML = "<div class='title'><span>" + g.n + "</span>"
+    + "<span class='badge " + g.v + "'>" + (g.v === "pass" ? "PASS" : "FAIL") + "</span></div>"
+    + "<p style='margin:4px 0 0'>" + g.d + "</p>";
+}
+gateDetail.innerHTML = "<div class='title'><span class='repro'>Reproduction</span></div>"
+  + "<p style='margin:4px 0 0'>Click a gate to see its recorded verdict on the seeded change. "
+  + "The one that fails is the one that encodes intent — start there in the live demo.</p>";
+</script>
+</body>
+</html>

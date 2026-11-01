@@ -64,7 +64,7 @@ if you want the exact versions this prototype was validated with.
 | `infra/eks-lab` | VPC, private-endpoint EKS cluster, managed node group |
 | `infra/workloads` | Namespace, service accounts, Pod Identity roles, synthetic tables, preview app |
 | `docs/` | Status, architecture, ADRs, runbook, roadmap, changelog, worklog, demo script |
-| `artifacts/` | Generated exports (screenshots, sanitized reports) |
+| `artifacts/` | Generated exports (screenshots, sanitized reports, interactive demo page, slide deck) |
 | `Dockerfile` | Preview container image; built and published only during Phase 1 |
 
 ## Ground rules

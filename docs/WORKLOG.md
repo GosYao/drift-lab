@@ -2,6 +2,26 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-11-01 — Interactive demo page and slide deck (0.7.4)
+
+### Done
+
+- Built `artifacts/demo-interactive.html` from `docs/DEMO.md`. It has six tabs,
+  expandable Whys, a six-step walkthrough, and a gate lab that shows the seeded
+  diff and each gate's recorded verdict. Every check-run and review element is
+  labeled as a reproduction of PR #1 (run 41073964551), not live AWS data.
+- Smoke-tested the page in headless Chrome. All tabs, arrow-key navigation,
+  accordions, six steps, and seven gates worked, with no console errors and
+  zero non-file network requests.
+- Built `artifacts/drift-lab-demo.pptx` (14 slides, 16:9) and checked every
+  dense slide visually for clipping. Fixed one overflow and a CSS specificity
+  bug that rendered footnotes at body size.
+
+### Not done
+
+- The deck slides are images, so text cannot be edited in PowerPoint. Edits go
+  through regenerating the deck.
+
 ## 2026-11-01 — Demo script for the verified pipeline (0.7.3)
 
 ### Done

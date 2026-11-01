@@ -3,6 +3,20 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.7.4 — 2026-11-01
+
+### Added
+
+- `artifacts/demo-interactive.html`: a self-contained, offline walkthrough of
+  `docs/DEMO.md` with six tabs (overview, the three Whys, the stepped
+  walkthrough, a gate lab with each gate's recorded verdict on the seeded
+  change, benefits, honest boundaries). It makes no network requests, and its
+  check-run and review content is labeled as a reproduction of PR #1, not
+  live data.
+- `artifacts/drift-lab-demo.pptx`: a 14-slide presentation of the same flow.
+- `.gitignore` now whitelists both deliverables and ignores the local `tmp/`
+  and `outputs/` scratch directories.
+
 ## 0.7.3 — 2026-11-01
 
 Added `docs/DEMO.md`: the end-to-end demo flow — opening, background with the
