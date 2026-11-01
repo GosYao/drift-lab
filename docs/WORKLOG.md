@@ -2,6 +2,22 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-11-01 — Demo script for the verified pipeline (0.7.3)
+
+### Done
+
+- Added `docs/DEMO.md`, the presentation script for the demo flow: background
+  and the three Whys (intent lives outside code; generic compliance packs do
+  not encode your intent; the agent takes the triage/fix labor while
+  deterministic checks keep the trust decision), the walkthrough against PR #1
+  with recorded timings (57s review job), the benefit analysis table, and the
+  closing cost-per-verified-fix framing.
+- Every claim in the script traces to a commit, a recorded run, or a
+  documented decision. The deliberately excluded claims are stated on stage:
+  one seeded case only, the UI is fixture replay, the benchmark arms are
+  designed but unmeasured, and remediation stays authorized human work.
+- README layout table now lists the demo script.
+
 ## 2026-10-30 — Droid review arm verified end-to-end (0.7.2)
 
 ### Done

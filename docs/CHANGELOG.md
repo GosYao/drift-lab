@@ -3,6 +3,16 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.7.3 — 2026-11-01
+
+Added `docs/DEMO.md`: the end-to-end demo flow — opening, background with the
+three Whys (why drift persists, why commodity scanners miss intent, why an
+agent changes the economics), the live walkthrough with recorded timings, and
+the technical and business benefit analysis built around cost per verified
+fix. Every claim in the script traces to a pushed commit, a recorded run, or
+a documented decision; the script keeps the honest boundaries on stage (one
+seeded case, fixture-replay UI, benchmark not yet measured, no auto-reconcile).
+
 ## 0.7.2 — 2026-10-30
 
 The Droid review arm verified end-to-end on seeded PR #1, with the arm
