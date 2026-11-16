@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-10-30
+Last updated: 2026-11-15
 
 ## Phase 1 — sandbox deployment (in progress: stacks up, drift proven, teardown not yet proven)
 
@@ -88,3 +88,13 @@ Phase 1 is **not complete** against its exit criteria. Not yet done:
 1. Teardown timing: tear the lab down (reverse order, `docs/RUNBOOK.md`) when the
    demo is done, and prove up -> down -> up.
 2. Phase 2: read-only collectors using the GitHub observer role.
+
+## Related work
+
+The broader demo program (this repo as the live review arm, the reference
+build as the platform arm) has its plan of record outside this repo:
+`~/project/droid-software-factory/docs/build-plan.md` in the git-tracked
+working copy. Phase 1 of that plan - the local hardening pass of the
+reference build - is complete; see the 2026-11-15 WORKLOG entry (0.7.5) for
+the summary. Nothing in the lab status above changed with it: teardown, the
+up -> down -> up proof, and cost recording remain open exactly as before.

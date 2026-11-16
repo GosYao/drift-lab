@@ -2,6 +2,24 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-11-15 — Folded demo plan; Phase 1 hardening of the reference build (0.7.5)
+
+### Done
+
+- Wrote the software-factory demo program's plan of record in the reference-build working copy (`~/project/droid-software-factory`, git-tracked, import commit `7312c09`): `docs/build-plan.md` folds the agreed narrative spine (entry / pivot / thesis), the demo acts (Build, Repair, Review, Attack, plus Maintain and the one-rulebook close), the per-task model matrix (A: strong hosted coder, B: different-family reviewer, C: small/fast for chores, A′: in-cluster vLLM via BYOK), and the harness beat ("same session, different brain") with its Phase 2 acceptance test. No code in this repo changed; this repo stays the live review-arm evidence (seeded PR #1).
+- Phase 1 (fix the reference build, local only) complete there: run-breaking custom model IDs fixed (`custom:<displayName-slug>-<index>`, short displayNames), unverified settings keys removed (`sessionDefaultSettings`, `allowManagedHooksOnly`, `telemetry.format`), `hooks.json` merged into `settings.json`, Router ID `auto` replaced by explicit placeholders.
+- Security findings closed: read-only `github-fetcher` token split from the publish token; reviewer runs read-only with the verdict parsed from its captured output (fail-closed); publish rebuilds the diff in a fresh clone (`core.hooksPath=/dev/null`) with protected-path rejection, secret scanning, and config-manifest re-verification; guardrail hooks moved to a read-only ConfigMap mount with sha256 manifest verification before every launch; blanket 443 egress replaced by a git-server CIDR block; the PR-review trigger ignores forks; `guard-execute` blocks `/proc`, `environ`, `git config`, and wrapped commands; `protect-paths` canonicalizes paths and blocks `.git` internals.
+- Honesty pass over the reference docs: "nothing leaves the building" → sovereign = "no model vendor sees the code" (only the airgap build is "nothing leaves"); "green is a fact" → the in-pod loop is the agent verifying itself, the PR's CI re-run is the independent fact; "Claude Code can't switch models" → the claim is that only Droid *governs* multi-model.
+- Validated locally in the working copy: YAML (ruby stdlib) and JSON parse, `bash -n` on all scripts, and 20 functional hook/verdict/regex tests pass (one real bug found and fixed: `realpath -m` is unavailable on macOS/BSD, so path canonicalization needed a lexical fallback). `shellcheck` is not installed here; skipped and documented. Nothing has run on a cluster yet.
+
+### Not done
+
+- Phase 2 (kind proof, connected profile, seeding `acme-ledger`, recording the acts) — needs a sandbox GitHub repo and a Factory key for the runner, both user-authorized. Phases 3-6 unchanged from the plan.
+
+### Decisions
+
+- The demo keeps Kubernetes + Tekton as the platform arm; drift-lab remains the review-arm target and the already-live PR-workflow evidence. The folded plan lives with the reference build, not in this repo.
+
 ## 2026-11-01 — Interactive demo page and slide deck (0.7.4)
 
 ### Done

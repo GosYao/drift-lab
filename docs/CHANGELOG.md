@@ -3,6 +3,23 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.7.5 — 2026-11-15
+
+### Added
+
+- Recorded the software-factory demo program's plan of record and completed
+  Phase 1 (hardening of the reference build in the git-tracked working copy
+  `~/project/droid-software-factory`): the narrative spine, the six demo acts
+  (Build, Repair, Review, Attack, Maintain, one-rulebook close), the per-task
+  model matrix, and the same-session-different-brain harness beat. Run-breaking
+  model-ID and settings bugs fixed; the security review findings closed
+  (token split, read-only reviewer, fresh-clone publish, immutable hook mount
+  with manifest verification, egress CIDR, fork check); an honesty pass
+  replaced the overclaims (sovereign ≠ "nothing leaves", the in-pod loop is
+  self-verification, multi-model is a governance claim, not a capability one).
+  No code in this repo changed; details in that working copy's `CHANGELOG.md`
+  and `docs/build-plan.md`, summarized in `docs/WORKLOG.md`.
+
 ## 0.7.4 — 2026-11-01
 
 ### Added
