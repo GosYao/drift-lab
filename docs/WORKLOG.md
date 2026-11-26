@@ -2,6 +2,19 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-11-26 — Local history and status cleanup
+
+- With user authorization, removed the stray shell line from the unpublished
+  loop commit's message. Rebuilt its local descendants with identical file
+  trees and valid signatures; Git now recognizes every co-author trailer.
+  No GitHub writes occurred, and the suppression worktree's edits were kept.
+- Commit mapping: loop 740d162 -> 0b33d26, parser f62f779 -> ea26fd3,
+  seeded feature 1c35d38 -> 4b34a57, verified fix 9d7b887 -> 04ff104.
+  Earlier entries retain their original rehearsal revision identifiers.
+  Recovery references are under `refs/repair-backups/2026-11-26/`.
+- Corrected STATUS's unit-test count from 139 to 140, including the parser's
+  added regression test.
+
 ## 2026-11-26 — Rehearsal of the loop, and one parser fix (0.8.0)
 
 ### Done

@@ -52,6 +52,9 @@ number tracks prototype milestones, not releases to users.
 
 ### Changed
 
+- Corrected STATUS's unit-test count to 140 after the triage parser regression
+  test. Repaired the unpublished loop commit's message so Git recognizes its
+  Droid co-author trailer; application file trees are unchanged.
 - README, RUNBOOK, DEMO and STATUS describe the new loop. The external
   scanner's name is scrubbed from DEMO.md, WORKLOG.md and
   artifacts/demo-interactive.html (current files, not git history), and the
