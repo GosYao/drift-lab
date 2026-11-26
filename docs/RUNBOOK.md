@@ -15,6 +15,11 @@ agent-browser 0.40.0).
 | `make policy-test` | Capability-intent `terraform test` runs with mock providers, in a disposable copy; no credentials, no account access |
 | `make report` | Print the `iam` scenario report as JSON |
 | `make preflight` | Check the local environment |
+| `make scan` | Semgrep + Trivy from the pinned images; needs Docker |
+| `make triage` | One review packet per finding; needs the droid CLI, read-only |
+| `make verify-fix` | The fix-evidence gates for a fix/ branch |
+| `make install` | Install `requirements.txt` into `.venv`, when a branch has one |
+| `make demo-reset` | Clear Stop-hook state and scratch directories |
 
 A preview server left running in the background can be stopped with
 `kill -- -<pid>` (the negative pid kills its process group).
@@ -31,25 +36,48 @@ state are never stored, displayed, or sent to a model.
 
 ## Pull-request CI
 
-`.github/workflows/pull-request.yml` runs on every PR to `main`: `make check`,
-`make terraform-check` + `make policy-test`, Semgrep (OWASP Top 10), and Trivy
-(vuln + secret) — pinned (actions by commit SHA, scanner images by digest) and
-credential-free. The workflow never plans or applies against AWS.
+`.github/workflows/pull-request.yml` runs on every pull request, whatever
+branch it targets: `make check`, `make terraform-check` + `make policy-test`,
+Semgrep (OWASP Top 10), and Trivy (vuln + secret) — pinned (actions by commit
+SHA, scanner images by digest) and credential-free. The scanners run through
+`scripts/scanners.py`, the same definition as `make scan` locally, and upload
+their normalized findings even when they fail. The workflow never plans or
+applies against AWS.
+
+Branches named `fix/*` also get the `verify-fix` job: the gates from
+`scripts/verify_fix.py` (no new suppression, a regression test that fails an
+assertion on the base and passes now, the unit suite against the pinned
+dependencies, the policy test when `infra/` changed, both scanners, plus a
+scan of the base for the before/after record). The verifier and scanner
+definitions are taken from the default branch, so neither the fix nor the
+branch it targets can change the checks that judge it.
+
+The fix is compared with its pull request's base, so open it against the
+branch that has the finding: the fix for a finding on an unmerged branch is a
+pull request into that branch. Against a base that never had the finding, the
+regression test has nothing to fail on and the fix is NOT VERIFIED.
+
+The same gates run locally as `make verify-fix` and as the Stop hook in
+`.factory/hooks.json`. `make red-green` shows the regression test alone: on
+the base, then on the fixed tree.
 
 To enable the Droid review arm:
 
 1. Create an API key at https://app.factory.ai/settings/api-keys.
 2. `gh secret set FACTORY_API_KEY --repo GosYao/drift-lab`
 
-The credentialed job runs a read-only `droid exec` review and never holds a
+The credentialed job runs `scripts/triage.py`: it computes the evidence (gate
+outcomes, scanner findings, chained exposure from `scripts/chained_exposure.py`,
+the diff), runs the triage model named in `.factory/droids/triage.md` through
+a read-only `droid exec`, and writes one review packet per finding with the
+computed evidence attached. If the model fails, times out, or returns an
+unusable answer, the review says "Triage unavailable, human review required."
+and every finding keeps the severity its gate reported. The job never holds a
 GitHub write token; a separate job posts the review using `GITHUB_TOKEN` only.
-Local pre-verification of the scanners uses the same pinned digests, for
-example:
+Local pre-verification of the scanners uses the same pinned digests:
 
 ```
-docker run --rm -v "$PWD:/src:ro" \
-  semgrep/semgrep@sha256:2e45517a85e13a9cca14a2a00df6bb48affd66b8ebfae1b0991cd57578362fb0 \
-  semgrep scan --config p/owasp-top-ten --error --metrics=off
+make scan
 ```
 
 ## Cloud operations (authorization-gated)

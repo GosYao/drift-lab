@@ -1,0 +1,13 @@
+# Security-owned paths. With a code-owner review required on main and
+# feature/**, a change to the rules, the droids, the judge, the pipeline, the
+# tests or the infrastructure needs an approval from the account below, who is
+# not the author. This is the second layer against a fix that games its own
+# test or checks; the verifier is the first.
+/AGENTS.md          @garymax-cloud
+/Makefile           @garymax-cloud
+/.factory/          @garymax-cloud
+/.github/           @garymax-cloud
+/scripts/           @garymax-cloud
+/tests/             @garymax-cloud
+/infra/             @garymax-cloud
+/requirements.txt   @garymax-cloud

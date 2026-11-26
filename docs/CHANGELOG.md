@@ -3,6 +3,181 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.8.2 — 2026-11-26
+
+### Added
+
+- `.github/CODEOWNERS`: the rules, droids, judge scripts, workflow, tests,
+  infrastructure and dependency pins are owned by a reviewer account that is
+  not the author. `scripts/check_repository.py` fails if the judge, the
+  rules or the tests lose their owner.
+
+## 0.8.1 — 2026-11-26
+
+### Added
+
+- `make red-green` (`scripts/verify_fix.py --red-green`): each test file the
+  fix changed, run on the base and then on this tree, with the assertion that
+  failed. Its answer is the regression-test gate's own.
+- 10 unit tests (150 total): the gate refuses a test that cannot be imported
+  or only crashes on the base, the red-green output, the refused base, and
+  the review's model line.
+
+### Changed
+
+- The regression-test gate asks for an assertion failure. A changed test must
+  fail an assertion on the base and pass now. A test that cannot be imported
+  on the base, or only crashes there, is refused: it shows nothing about how
+  the base behaved. The gate's evidence names the failing test and its
+  assertion message.
+- `scripts/verify_fix.py` refuses a `--base` that is not in the tree's
+  history. Compared with a commit beside the branch, the base's own newer
+  changes count as the fix's, and a test that is merely out of date can pass
+  for proof.
+- AGENTS.md and the fix droid: the regression test for a security fix
+  reproduces the exploit. It sends the attack input through the entry point
+  an attacker would use and asserts that the attack's effect, a harmless
+  marker file, does not happen.
+- The pull-request workflow runs on pull requests into any branch. The fix
+  for a finding on an unmerged branch is a pull request into that branch, so
+  it is compared with the code that has the finding. The verify-fix job takes
+  the verifier and the scanner definition from the default branch, so neither
+  the fix nor the branch it targets can change the checks that judge it.
+  `scripts/check_repository.py` fails if either property is removed.
+- The triage droid names `glm-5.3-flash` (was `gpt-5.4-mini`), chosen from a
+  side-by-side run on the three rehearsal shapes (see WORKLOG).
+- The review's model line says when the model came from the command line or
+  `TRIAGE_MODEL` instead of the droid file, and shows the reasoning effort
+  that was asked for when the run reports a different one.
+
+## 0.8.0 — 2026-11-26
+
+### Added
+
+- The findings-to-verified-fix loop:
+  - `scripts/scanners.py`: one pinned definition of both scanners (Semgrep
+    OWASP Top 10, Trivy vuln + secret, digest-pinned images) with normalized
+    JSON findings, used by the pipeline, the verifier, and `make scan`. A
+    scanner that cannot run is an error, never a clean result.
+  - `scripts/verify_fix.py`: the gates a security fix must pass — no new
+    suppression and no change to the checks that judge the fix, a regression
+    test that fails on the base and passes now, the unit suite against the
+    pinned dependencies, the capability-intent policy test when `infra/`
+    changed, and both pinned scanners (optionally against the base for the
+    before/after record). `make verify-fix`.
+  - `.factory/hooks.json`: a Stop hook that runs the verifier when a session
+    on a `fix/` branch stops with unverified changes, blocks with the gate
+    output as the reason (three attempts), then gives up marked NOT VERIFIED.
+  - `scripts/chained_exposure.py`: computes from Terraform source and git
+    which identity a changed workload runs as, what that identity can read,
+    and which other branches change the same policy or the same workload's
+    code. A construct it cannot model is "unknown", never guessed.
+  - `scripts/triage.py` and `.factory/droids/triage.md`: computes the review
+    evidence (findings, gate outcomes, chained exposure, diff), runs the
+    triage model named in the droid file read-only over it, and composes one
+    review packet per finding with the computed evidence attached. Fail-safe:
+    an unusable model result becomes "Triage unavailable, human review
+    required." and every finding keeps the severity its gate reported.
+    `make triage`.
+  - `.factory/droids/fix.md`: the fix droid (named frontier model): never
+    suppress, add a regression test, and run `make verify-fix` before done.
+- Pipeline: the scanner jobs upload normalized findings even on failure; a
+  `verify-fix` job for `fix/` branches runs the verifier taken from the
+  base revision, so a fix cannot change the checks that judge it; the review
+  job builds packets with `scripts/triage.py` and posts them through the
+  unchanged two-job credential split. The static review prompt
+  (`.github/droid-review-prompt.md`) is replaced by the droid file plus
+  computed evidence.
+- AGENTS.md: two security-fix rules (no suppressions; a regression test and a
+  VERIFIED verifier run before a fix is called done).
+- `make install` and `make demo-reset`; the test interpreter is the
+  project `.venv` whenever a branch has one.
+- 64 new unit tests (139 total): scanner parsing and fail-closed
+  classification, suppression and regression gates, the Stop hook's block
+  cap, chained-exposure parsing and branch reasoning, packet composition and
+  the fail-safe.
+
+### Changed
+
+- Corrected STATUS's unit-test count to 140 after the triage parser regression
+  test. Repaired the unpublished loop commit's message so Git recognizes its
+  Droid co-author trailer; application file trees are unchanged.
+- README, RUNBOOK, DEMO and STATUS describe the new loop. The external
+  scanner's name is scrubbed from DEMO.md, WORKLOG.md and
+  artifacts/demo-interactive.html (current files, not git history), and the
+  optional UI step is removed from DEMO.md.
+
+## 0.7.5 — 2026-11-15
+
+### Added
+
+- Recorded the software-factory demo program's plan of record and completed
+  Phase 1 (hardening of the reference build in the git-tracked working copy
+  `~/project/droid-software-factory`): the narrative spine, the six demo acts
+  (Build, Repair, Review, Attack, Maintain, one-rulebook close), the per-task
+  model matrix, and the same-session-different-brain harness beat. Run-breaking
+  model-ID and settings bugs fixed; the security review findings closed
+  (token split, read-only reviewer, fresh-clone publish, immutable hook mount
+  with manifest verification, egress CIDR, fork check); an honesty pass
+  replaced the overclaims (sovereign ≠ "nothing leaves", the in-pod loop is
+  self-verification, multi-model is a governance claim, not a capability one).
+  No code in this repo changed; details in that working copy's `CHANGELOG.md`
+  and `docs/build-plan.md`, summarized in `docs/WORKLOG.md`.
+
+## 0.7.4 — 2026-11-01
+
+### Added
+
+- `artifacts/demo-interactive.html`: a self-contained, offline walkthrough of
+  `docs/DEMO.md` with six tabs (overview, the three Whys, the stepped
+  walkthrough, a gate lab with each gate's recorded verdict on the seeded
+  change, benefits, honest boundaries). It makes no network requests, and its
+  check-run and review content is labeled as a reproduction of PR #1, not
+  live data.
+- `artifacts/drift-lab-demo.pptx`: a 14-slide presentation of the same flow.
+- `.gitignore` now whitelists both deliverables and ignores the local `tmp/`
+  and `outputs/` scratch directories.
+
+## 0.7.3 — 2026-11-01
+
+Added `docs/DEMO.md`: the end-to-end demo flow — opening, background with the
+three Whys (why drift persists, why commodity scanners miss intent, why an
+agent changes the economics), the live walkthrough with recorded timings, and
+the technical and business benefit analysis built around cost per verified
+fix. Every claim in the script traces to a pushed commit, a recorded run, or
+a documented decision; the script keeps the honest boundaries on stage (one
+seeded case, fixture-replay UI, benchmark not yet measured, no auto-reconcile).
+
+## 0.7.2 — 2026-10-30
+
+The Droid review arm verified end-to-end on seeded PR #1, with the arm
+admitted by the availability gate and the review posted by the token-separated
+job. The read-only review cited the failing deterministic gate by name, run,
+and exact assertion condition ("support-agent must read only the customer-orders
+table"), classified the seed as a proposed intent change that does not justify
+weakening the capability baseline, distinguished mock-provider verification from
+live AWS access, and closed with `VERDICT: request changes` plus a verified fix
+path. The deterministic gates decided; the review explained them.
+
+## 0.7.1 — 2026-10-30
+
+CI catch: Semgrep flagged the Droid CLI install step's `curl | sh` pattern
+(`gha-curl-pipe-shell`) in the new workflow itself — the one file local
+pre-verification could not cover, because it did not exist when the scanners
+were pre-verified. Accepted inline with rationale: the vendor-documented
+install path, over TLS from the vendor's own domain, on an ephemeral runner,
+in a job whose only credential is the FACTORY_API_KEY that same vendor issued.
+Download-then-exec would hide the identical trust from the scanner without
+reducing it; the inline annotation keeps the acceptance visible at the source
+line.
+
+The seeded verification PR (#1, support-role read broadening from 0.6.0) ran
+the workflow live: `make check`, terraform fmt/validate, Trivy, and the Droid
+availability gate passed; the capability-intent gate failed on exactly
+`support-agent must read only the customer-orders table` (the other four
+runs passed); the Droid review and posting jobs skipped while
+`FACTORY_API_KEY` is unset.
+
 ## 0.7.0 — 2026-10-30
 
 GitHub Actions pull-request workflow with credential-separated Droid review.

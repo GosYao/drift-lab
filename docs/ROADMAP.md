@@ -52,7 +52,9 @@ Started 2026-10-30: the deterministic validation gate now includes capability-in
 Terraform tests (`make policy-test`, mock providers, credential-free); a seeded
 support-role broadening fails them. A pull-request workflow (0.7.0) runs the
 deterministic gates and a credential-separated, read-only Droid review that
-cites their outcomes instead of re-deciding them.
+cites their outcomes instead of re-deciding them. The arm is verified
+end-to-end (0.7.2): the posted review cited the failing assertion, classified
+the seed, and ended `VERDICT: request changes`.
 
 Exit criteria: at least one live drift handled end-to-end with a verified fix; cost
 per verified fix measured and recorded.

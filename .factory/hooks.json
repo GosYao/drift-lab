@@ -1,0 +1,13 @@
+{
+  "Stop": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python3 \"$(git rev-parse --show-toplevel)/scripts/verify_fix.py\" --stop-hook",
+          "timeout": 300
+        }
+      ]
+    }
+  ]
+}

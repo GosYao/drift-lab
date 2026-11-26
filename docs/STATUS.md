@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-10-30
+Last updated: 2026-11-26
 
 ## Phase 1 — sandbox deployment (in progress: stacks up, drift proven, teardown not yet proven)
 
@@ -46,7 +46,7 @@ Phase 1 is **not complete** against its exit criteria. Not yet done:
 
 ## Phase 0 — local prototype (complete)
 
-- 75 unit tests pass (`make test`); `make check` and `make terraform-check` pass.
+- 150 unit tests pass (`make test`); `make check` and `make terraform-check` pass.
 - `make policy-test` (capability-intent Terraform tests, mock providers, no
   credentials) passes on the approved revision and fails on a seeded IAM
   broadening.
@@ -59,11 +59,19 @@ Phase 1 is **not complete** against its exit criteria. Not yet done:
 
 - **Collectors are in; the UI is not.** `python -m drift_lab collect` performs
   verified live read-only collection, but the preview UI still replays fixtures.
-- **The GitHub workflow exists; the Droid arm is gated.** Pull requests to `main`
-  now run the deterministic gates (tests, terraform-check + policy-test,
-  Semgrep, Trivy) plus a credential-separated, read-only Droid review. The
-  Droid arm stays skipped until the user sets `FACTORY_API_KEY` as a repository
-  secret. The GitHub panel in the UI remains a fixture preview.
+- **The PR workflow now runs the full findings-to-verified-fix loop.**
+  Deterministic gates (tests, terraform-check + policy-test, Semgrep, Trivy),
+  a `verify-fix` job on `fix/` branches (no new suppression, a regression
+  test that fails an assertion on the base and passes now, suite, policy
+  test, both scanners; the judge is taken from the default branch), and a
+  credential-separated review that posts one packet per finding over computed
+  evidence (scanner findings, gate outcomes, chained exposure, diff) with a
+  fail-safe that keeps the scanner's severity. The workflow runs on pull
+  requests into any branch, so a fix targets the branch that has the finding
+  and is compared with the vulnerable code. The earlier review arm was
+  verified live on seeded PR #1 (0.7.2). The new loop is verified locally
+  only: the seeded branch for PR #2 and its fix branch exist and are not yet
+  pushed. The GitHub panel in the UI remains a fixture preview.
 - **Real agent egress is blocked by design.** Pod Identity credentials, DNS, and
   DynamoDB need a reviewed egress allow-list before a real agent replaces the
   fixture viewer.
@@ -85,3 +93,13 @@ Phase 1 is **not complete** against its exit criteria. Not yet done:
 1. Teardown timing: tear the lab down (reverse order, `docs/RUNBOOK.md`) when the
    demo is done, and prove up -> down -> up.
 2. Phase 2: read-only collectors using the GitHub observer role.
+
+## Related work
+
+The broader demo program (this repo as the live review arm, the reference
+build as the platform arm) has its plan of record outside this repo:
+`~/project/droid-software-factory/docs/build-plan.md` in the git-tracked
+working copy. Phase 1 of that plan - the local hardening pass of the
+reference build - is complete; see the 2026-11-15 WORKLOG entry (0.7.5) for
+the summary. Nothing in the lab status above changed with it: teardown, the
+up -> down -> up proof, and cost recording remain open exactly as before.
