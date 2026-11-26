@@ -5,7 +5,8 @@ base commit (default: where the branch left its upstream, otherwise HEAD):
 
   no-new-suppression  no new scanner suppression, no change to the checks that
                       judge the fix, no removed test or assertion
-  regression-test     a changed test fails on the base code and passes now
+  regression-test     a changed test fails an assertion on the base code and
+                      passes now
   tests               the unit suite passes against the pinned dependencies
   policy-test         the capability-intent tests pass, when infra/ changed
   semgrep, trivy      the pinned scanners report nothing
@@ -13,6 +14,9 @@ base commit (default: where the branch left its upstream, otherwise HEAD):
 The pull-request pipeline runs these gates as its verify-fix job, and Droid's
 Stop hook runs them with --stop-hook. A gate that cannot run counts as failed.
 A verified fix is evidence for a reviewer: a person still approves the merge.
+
+--red-green shows the regression-test evidence on its own: each changed test
+file run on the base, then on this tree.
 """
 
 import argparse
@@ -47,6 +51,10 @@ JUDGES = (".github/workflows/", ".factory/hooks.json", "Makefile",
 TEST_NAME = re.compile(r"^\s*def (test_\w+)", re.M)
 ASSERTION = re.compile(r"\bself\.assert\w+\(|^\s*assert\s", re.M)
 PIN = re.compile(r"^\s*([A-Za-z0-9_.\-]+)\s*==\s*([^\s;#]+)")
+# One failure block in unittest's output: its kind, the test's name, its traceback.
+# The optional line is the first line of the test's docstring.
+PROBLEM = re.compile(r"^(FAIL|ERROR): (\S+)[^\n]*\n(?:[^\n]*\n)?-{20,}\n(.*?)"
+                     r"(?=^[=-]{20,}$)", re.M | re.S)
 
 
 def git(root, *args):
@@ -140,6 +148,15 @@ def test_python(root):
     return str(candidate) if candidate.exists() else sys.executable
 
 
+def failure_reason(traceback):
+    """The exception line of one failure block: the first line after the last frame."""
+    lines = traceback.rstrip().splitlines()
+    frames = [index for index, line in enumerate(lines) if line.startswith("  File ")]
+    after = lines[frames[-1] + 1:] if frames else lines
+    reason = next((line for line in after if line.strip() and not line.startswith(" ")), "")
+    return (reason or (lines[-1] if lines else "")).strip()[:200]
+
+
 def run_unittest(python, cwd, pattern=None, timeout=300):
     command = [python, "-m", "unittest", "discover", "-s", "tests"]
     if pattern:
@@ -149,7 +166,7 @@ def run_unittest(python, cwd, pattern=None, timeout=300):
                               timeout=timeout,
                               env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))
     except subprocess.TimeoutExpired:
-        return {"ok": False, "ran": 0, "first": "",
+        return {"ok": False, "ran": 0, "first": "", "problems": [],
                 "summary": "timed out after {} seconds".format(timeout)}
     output = done.stderr + done.stdout
     ran = re.search(r"^Ran (\d+) tests? in", output, re.M)
@@ -158,18 +175,32 @@ def run_unittest(python, cwd, pattern=None, timeout=300):
     count = int(ran.group(1)) if ran else 0
     return {"ok": done.returncode == 0 and count > 0, "ran": count,
             "first": first.group(0) if first else "",
-            "summary": lines[-1] if lines else "no output"}
+            "summary": lines[-1] if lines else "no output",
+            "problems": [(kind, name, failure_reason(body))
+                         for kind, name, body in PROBLEM.findall(output)]}
 
 
-def gate_regression_test(root, base, changes, python, dependencies=(True, "")):
-    candidates = sorted(path for path, status in changes.items()
-                        if status in "AM" and fnmatch.fnmatch(path, "tests/test_*.py"))
-    if not candidates:
-        return Gate("regression-test", FAIL,
-                    "no test file under tests/ was added or changed")
-    if not dependencies[0]:
-        return Gate("regression-test", ERROR, "could not run: " + dependencies[1])
-    proven, unproven = [], []
+def assertion_failures(result):
+    """The tests that ran and failed an assertion.
+
+    An ERROR is not one: a test that cannot be imported, or that crashes, says
+    nothing about how the code under test behaved.
+    """
+    return [problem for problem in result["problems"] if problem[0] == "FAIL"]
+
+
+def changed_tests(changes):
+    return sorted(path for path, status in changes.items()
+                  if status in "AM" and fnmatch.fnmatch(path, "tests/test_*.py"))
+
+
+def before_and_after(root, base, candidates, python):
+    """[(path, result on this tree, result on the base)] for each changed test file.
+
+    The base is the base commit's code with only the changed test files copied in.
+    A test that does not pass on this tree is not run on the base (None).
+    """
+    results = []
     with scanners.scratch_dir(root) as scratch:
         before = scanners.export_tree(root, scratch / "base", base)
         for path in candidates:
@@ -177,20 +208,45 @@ def gate_regression_test(root, base, changes, python, dependencies=(True, "")):
             shutil.copy2(str(Path(root) / path), str(before / path))
         for path in candidates:
             now = run_unittest(python, root, Path(path).name)
-            if not now["ok"]:
-                return Gate("regression-test", FAIL, "{} does not pass on this tree: {}"
-                            .format(path, now["first"] or now["summary"]))
-            old = run_unittest(python, before, Path(path).name)
-            if old["ok"]:
-                unproven.append(path)
-            else:
-                proven.append("{} fails on the base ({}) and passes now"
-                              .format(path, old["first"] or old["summary"]))
+            old = run_unittest(python, before, Path(path).name) if now["ok"] else None
+            results.append((path, now, old))
+    return results
+
+
+def regression_proof(results):
+    """(proven, detail) for what before_and_after() returned.
+
+    Proven means every changed test file passes on this tree and at least one
+    of them fails an assertion on the base.
+    """
+    proven, unproven = [], []
+    for path, now, old in results:
+        if old is None:
+            return False, "{} does not pass on this tree: {}".format(
+                path, now["first"] or now["summary"])
+        asserted = assertion_failures(old)
+        if old["ok"]:
+            unproven.append("{} passes on the base too".format(path))
+        elif not asserted:
+            unproven.append("{} does not fail an assertion on the base ({})"
+                            .format(path, old["first"] or old["summary"]))
+        else:
+            proven.append("{} fails on the base (FAIL: {}: {}) and passes now"
+                          .format(path, *asserted[0][1:]))
     if proven:
-        return Gate("regression-test", PASS, "; ".join(proven))
-    return Gate("regression-test", FAIL,
-                "{} passes on the base too, so it does not prove the fix"
-                .format(", ".join(unproven)))
+        return True, "; ".join(proven)
+    return False, "; ".join(unproven) + ", so it does not prove the fix"
+
+
+def gate_regression_test(root, base, changes, python, dependencies=(True, "")):
+    candidates = changed_tests(changes)
+    if not candidates:
+        return Gate("regression-test", FAIL,
+                    "no test file under tests/ was added or changed")
+    if not dependencies[0]:
+        return Gate("regression-test", ERROR, "could not run: " + dependencies[1])
+    proven, detail = regression_proof(before_and_after(root, base, candidates, python))
+    return Gate("regression-test", PASS if proven else FAIL, detail)
 
 
 def pins(root):
@@ -345,6 +401,50 @@ def render_markdown(gates, base, head):
     return "\n".join(lines) + "\n"
 
 
+def red_green(root, base, color=False):
+    """The regression-test evidence, shown: each changed test on the base, then here.
+
+    Returns (text, proven); proven is the regression-test gate's own answer.
+    """
+    candidates = changed_tests(changed_files(root, base))
+    if not candidates:
+        return "red-green: no test file under tests/ was added or changed", False
+    python = test_python(root)
+    ok, described = sync_dependencies(root, python)
+    if not ok:
+        return "red-green: could not run: " + described, False
+    short = git(root, "rev-parse", "--short", base).strip()
+
+    def row(where, result):
+        word, code = (("GREEN", 32) if result["ok"] else
+                      ("RED", 31) if assertion_failures(result) else ("ERROR", 33))
+        word = "\033[1;{}m{:<5}\033[0m".format(code, word) if color else "{:<5}".format(word)
+        if result["ok"]:
+            count = "1 test passes" if result["ran"] == 1 else \
+                "{} tests pass".format(result["ran"])
+        elif result["problems"]:
+            count = "{} of {} did not pass".format(len(result["problems"]), result["ran"])
+        else:
+            count = result["summary"]
+        lines = ["  {}  on {}: {}".format(word, where, count)]
+        for kind, name, reason in result["problems"][:3]:
+            lines += ["         {}: {}".format(kind, name), "         " + reason]
+        return lines
+
+    results = before_and_after(root, base, candidates, python)
+    proven, lines = regression_proof(results)[0], []
+    for path, now, old in results:
+        lines += ["red-green: " + path, ""]
+        if old is not None:
+            lines += row("the base " + short, old)
+        lines += row("this tree", now) + [""]
+    lines.append("Proven: the test fails an assertion on the code before the fix and "
+                 "passes after it." if proven else
+                 "Not proven: the test must fail an assertion on the base and pass on "
+                 "this tree.")
+    return "\n".join(lines), proven
+
+
 def describe(root, base):
     # In the pipeline the merge commit is checked out detached; the branch is in the event.
     branch = (os.environ.get("GITHUB_HEAD_REF")
@@ -423,11 +523,15 @@ def main(argv=None):
     parser.add_argument("--root", type=Path, default=ROOT,
                         help="checkout to verify (default: the one this script is in)")
     parser.add_argument("--base",
-                        help="commit to compare the working tree with (default: where "
-                             "the branch left its upstream, otherwise HEAD)")
+                        help="commit in this tree's history to compare the working "
+                             "tree with (default: where the branch left its upstream, "
+                             "otherwise HEAD)")
     parser.add_argument("--scan-base", action="store_true",
                         help="also scan the base, to record what the scanners said before")
     parser.add_argument("--report", type=Path, help="write the result as Markdown")
+    parser.add_argument("--red-green", action="store_true",
+                        help="show the changed tests failing on the base, then "
+                             "passing on this tree")
     parser.add_argument("--stop-hook", action="store_true",
                         help="run as Droid's Stop hook: read the event on stdin")
     args = parser.parse_args(argv)
@@ -448,6 +552,21 @@ def main(argv=None):
     except subprocess.CalledProcessError:
         print("verify-fix: unknown base commit: {}".format(args.base), file=sys.stderr)
         return 2
+    # Compared with a commit beside this branch, the base's own newer changes
+    # would count as the fix's, and a test that is merely out of date could
+    # pass for proof. The pipeline verifies the merge commit, so its base is
+    # always in the history.
+    if subprocess.run(["git", "merge-base", "--is-ancestor", base, "HEAD"],
+                      cwd=str(root), capture_output=True).returncode != 0:
+        print("verify-fix: base {} is not in this tree's history, so its newer changes "
+              "would count as this fix's. Rebase or merge first."
+              .format(args.base or base[:7]), file=sys.stderr)
+        return 2
+    if args.red_green:
+        text, proven = red_green(root, base, color=sys.stdout.isatty()
+                                 and "NO_COLOR" not in os.environ)
+        print(text)
+        return 0 if proven else 1
     branch, short, head = describe(root, base)
     gates = verify(root, base, args.scan_base)
     print(render_text(gates, "verify-fix: {} on {} against base {}".format(head, branch, short)))

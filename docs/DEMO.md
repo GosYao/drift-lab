@@ -8,7 +8,7 @@ and no claim generalizes one data point into a tool comparison.
 Run it against the public repository (GosYao/drift-lab) with the seeded pull
 requests open: PR #1 (support-role read broadening, labelled seeded, never to
 merge), PR #2 (the vulnerable YAML import, labelled seeded, never to merge or
-deploy), and the fix pull request for PR #2's findings.
+deploy), and the fix pull request, opened into PR #2's branch.
 
 ## Opening (60 seconds)
 
@@ -100,26 +100,34 @@ labor cost collapses.
    tries to finish, the Stop hook (`.factory/hooks.json`) runs
    `scripts/verify_fix.py` against the base: no new suppression (a `nosemgrep`
    comment, an ignore-file entry, a weaker command, a removed or weakened
-   test), a regression test that fails on the base and passes now, the full
-   unit suite against the pinned dependencies, the capability-intent policy
-   test when `infra/` changed, and both pinned scanners clean. A failing gate
-   blocks the stop and the reason becomes the agent's next instruction; after
-   three blocks the hook gives up and the fix stays NOT VERIFIED. Show the
-   refusal once: the same finding "fixed" with a `nosemgrep` comment fails the
-   first gate and names the suppression. A pin bump alone would turn the
-   dependency scanner green and leave the unsafe call in place; a suppression
-   would turn the code scanner green and fix nothing. The fix is not done
+   test), a regression test that fails an assertion on the base and passes
+   now, the full unit suite against the pinned dependencies, the
+   capability-intent policy test when `infra/` changed, and both pinned
+   scanners clean. A failing gate blocks the stop and the reason becomes the
+   agent's next instruction; after three blocks the hook gives up and the fix
+   stays NOT VERIFIED. Show the refusal once: the same finding "fixed" with a
+   `nosemgrep` comment fails the first gate and names the suppression. A pin
+   bump alone would turn the dependency scanner green and leave the unsafe
+   call in place; a suppression would turn the code scanner green and fix
+   nothing. Then show the proof itself: `make red-green` runs the fix's
+   regression test on the base and on the fixed tree. `AGENTS.md` asks for a
+   test that reproduces the exploit: it sends the attack input to the
+   endpoint and asserts that its effect, a marker file, does not appear. On
+   the base that assertion fails; with the fix it passes. The fix is not done
    because the model says so; it is done because the scanner and the test say
    so.
 
-4. **The fix pull request (2 min).** The pipeline's verify-fix job runs the
-   same gates in CI, using the verifier and scanner definitions from the base
-   revision, so the fix cannot change the checks that judge it. Its evidence
-   (gate results before and after) is uploaded as an artifact and folded into
-   the review packet the droid-review job posts. Green checks plus a packet:
-   the scanner output before and after, the regression test, the
-   no-suppression result, the chained-exposure line, and the model that wrote
-   it.
+4. **The fix pull request (2 min).** The fix is a pull request into the
+   branch that has the finding (PR #2's branch), not into `main`, so the
+   pipeline compares it with the vulnerable code. The verify-fix job runs the
+   same gates in CI, using the verifier and scanner definitions from the
+   default branch, so neither the fix nor the branch it targets can change
+   the checks that judge it. Its evidence (gate results before and after) is
+   uploaded as an artifact and folded into the review packet the droid-review
+   job posts. Green checks plus a packet: the scanner output before and
+   after, the regression test, the no-suppression result, the
+   chained-exposure line, and the model that wrote it. Merging the fix into
+   PR #2's branch is what clears PR #2's findings.
 
 5. **The trust architecture (1 min).** The answer to "isn't an agent in CI
    dangerous?":
@@ -144,7 +152,7 @@ labor cost collapses.
 | Intent as code | 5 capability tests, mock providers, credential-free; seeded broadening fails them | Every PR checks intent pre-merge at near-zero marginal cost; no AWS credentials in PR checks |
 | Detection vs explanation | Gates decide; the triage model recommends one packet per finding over computed evidence | Reviewer starts from a recommendation with evidence; the model never changes a check result |
 | Fail-safe triage | Model failure renders "triage unavailable, human review required"; severities unchanged | The agent can add labor savings but can never silently lower the bar |
-| Fix with proof | Verifier gates: no suppression, regression test fails-before/passes-after, scanners clean, locally and in CI | "Fixed" becomes a reproducible state with evidence, not a claim in a comment |
+| Fix with proof | Verifier gates: no suppression, a regression test that fails an assertion before the fix and passes after, scanners clean, locally and in CI; the test reproduces the exploit with a harmless payload | "Fixed" becomes a reproducible state with evidence, not a claim in a comment |
 | Cross-tool delta | External IAC/SCA checks passed the seeded broadening; the lab's own gate failed it | Your intent is a differentiator no vendor product carries (one seeded case, not a generalization) |
 | Supply chain | Pinned actions and digests, signed commits, read-only collector, sanitized snapshots | No account IDs or raw state leave the repo; findings shareable without redaction work |
 | Credential separation | Factory key and GitHub token never co-located; review job read-only | The agent adds capability without adding blast radius; the auditable answer to agent risk |
@@ -162,8 +170,15 @@ the run used, so the numerator becomes a number instead of an anecdote.
 - One seeded pair of pull requests; no generalization beyond it, no
   competitor-parity claims.
 - The UI is fixture replay; live collection is the CLI for now.
-- The verifier re-runs the scanners and tests; it does not reproduce an
-  exploit, and the demo does not claim it does.
+- The verifier does not write or judge an exploit. It requires a changed
+  test that fails an assertion on the base and passes now. That the test
+  sends the attack through the real entry point is a rule the fix droid
+  follows and the reviewer reads in the diff. The payload is harmless (a
+  marker file in a temporary directory) and runs only inside the unit test,
+  never against the lab in AWS.
+- The verifier counts tests and assertions; it does not read them. An
+  assertion rewritten in place to check less, with the count unchanged,
+  passes the suppression gate.
 - The chained-exposure script models the lab's own Terraform constructs only
   and answers "unknown" on anything else; it reads source, not live AWS
   permissions.
@@ -185,9 +200,10 @@ the run used, so the numerator becomes a number instead of an anecdote.
   `.factory/droids/triage.md`; Stop hook: `.factory/hooks.json`
 - Scripts: `scripts/scanners.py` (one pinned scanner definition),
   `scripts/triage.py` (evidence + packets + fail-safe),
-  `scripts/chained_exposure.py`, `scripts/verify_fix.py` (the fix gates)
+  `scripts/chained_exposure.py`, `scripts/verify_fix.py` (the fix gates;
+  `make red-green` shows the regression test before and after)
 - Policy gate: `infra/workloads/policy.tftest.hcl` via `make policy-test`
 - Inline acceptances to show: `infra/workloads/main.tf` (KMS on synthetic
   tables), `.github/workflows/pull-request.yml` (CLI install pattern)
-- Records: `docs/WORKLOG.md` (0.7.0-0.7.2, 0.8.0), `docs/CHANGELOG.md`,
+- Records: `docs/WORKLOG.md` (0.7.0-0.7.2, 0.8.0, 0.8.1), `docs/CHANGELOG.md`,
   `docs/STATUS.md`, `docs/RUNBOOK.md` (CI section)

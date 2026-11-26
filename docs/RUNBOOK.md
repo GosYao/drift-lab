@@ -36,21 +36,30 @@ state are never stored, displayed, or sent to a model.
 
 ## Pull-request CI
 
-`.github/workflows/pull-request.yml` runs on every PR to `main`: `make check`,
-`make terraform-check` + `make policy-test`, Semgrep (OWASP Top 10), and Trivy
-(vuln + secret) — pinned (actions by commit SHA, scanner images by digest) and
-credential-free. The scanners run through `scripts/scanners.py`, the same
-definition as `make scan` locally, and upload their normalized findings even
-when they fail. The workflow never plans or applies against AWS.
+`.github/workflows/pull-request.yml` runs on every pull request, whatever
+branch it targets: `make check`, `make terraform-check` + `make policy-test`,
+Semgrep (OWASP Top 10), and Trivy (vuln + secret) — pinned (actions by commit
+SHA, scanner images by digest) and credential-free. The scanners run through
+`scripts/scanners.py`, the same definition as `make scan` locally, and upload
+their normalized findings even when they fail. The workflow never plans or
+applies against AWS.
 
 Branches named `fix/*` also get the `verify-fix` job: the gates from
-`scripts/verify_fix.py` (no new suppression, a regression test that fails on
-the base and passes now, the unit suite against the pinned dependencies, the
-policy test when `infra/` changed, both scanners, plus a scan of the base for
-the before/after record). The verifier and scanner definitions are taken from
-the base revision, so a fix cannot change the checks that judge it. The same
-gates run locally as `make verify-fix` and as the Stop hook in
-`.factory/hooks.json`.
+`scripts/verify_fix.py` (no new suppression, a regression test that fails an
+assertion on the base and passes now, the unit suite against the pinned
+dependencies, the policy test when `infra/` changed, both scanners, plus a
+scan of the base for the before/after record). The verifier and scanner
+definitions are taken from the default branch, so neither the fix nor the
+branch it targets can change the checks that judge it.
+
+The fix is compared with its pull request's base, so open it against the
+branch that has the finding: the fix for a finding on an unmerged branch is a
+pull request into that branch. Against a base that never had the finding, the
+regression test has nothing to fail on and the fix is NOT VERIFIED.
+
+The same gates run locally as `make verify-fix` and as the Stop hook in
+`.factory/hooks.json`. `make red-green` shows the regression test alone: on
+the base, then on the fixed tree.
 
 To enable the Droid review arm:
 

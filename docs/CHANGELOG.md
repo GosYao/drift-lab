@@ -3,6 +3,44 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.8.1 — 2026-11-26
+
+### Added
+
+- `make red-green` (`scripts/verify_fix.py --red-green`): each test file the
+  fix changed, run on the base and then on this tree, with the assertion that
+  failed. Its answer is the regression-test gate's own.
+- 10 unit tests (150 total): the gate refuses a test that cannot be imported
+  or only crashes on the base, the red-green output, the refused base, and
+  the review's model line.
+
+### Changed
+
+- The regression-test gate asks for an assertion failure. A changed test must
+  fail an assertion on the base and pass now. A test that cannot be imported
+  on the base, or only crashes there, is refused: it shows nothing about how
+  the base behaved. The gate's evidence names the failing test and its
+  assertion message.
+- `scripts/verify_fix.py` refuses a `--base` that is not in the tree's
+  history. Compared with a commit beside the branch, the base's own newer
+  changes count as the fix's, and a test that is merely out of date can pass
+  for proof.
+- AGENTS.md and the fix droid: the regression test for a security fix
+  reproduces the exploit. It sends the attack input through the entry point
+  an attacker would use and asserts that the attack's effect, a harmless
+  marker file, does not happen.
+- The pull-request workflow runs on pull requests into any branch. The fix
+  for a finding on an unmerged branch is a pull request into that branch, so
+  it is compared with the code that has the finding. The verify-fix job takes
+  the verifier and the scanner definition from the default branch, so neither
+  the fix nor the branch it targets can change the checks that judge it.
+  `scripts/check_repository.py` fails if either property is removed.
+- The triage droid names `glm-5.3-flash` (was `gpt-5.4-mini`), chosen from a
+  side-by-side run on the three rehearsal shapes (see WORKLOG).
+- The review's model line says when the model came from the command line or
+  `TRIAGE_MODEL` instead of the droid file, and shows the reasoning effort
+  that was asked for when the run reports a different one.
+
 ## 0.8.0 — 2026-11-26
 
 ### Added

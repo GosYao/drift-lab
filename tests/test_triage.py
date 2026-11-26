@@ -56,7 +56,8 @@ VERDICT: request changes
 
 def run_dict(**overrides):
     run = {"ok": True, "text": PACKETS, "requested": "gemini-3.8-flash",
-           "model": "gemini-3.8-flash", "effort": "medium", "credits": 210,
+           "model": "gemini-3.8-flash", "effort": "medium", "asked": "medium",
+           "credits": 210,
            "seconds": 42, "turns": 5, "session": "s-1", "error": ""}
     run.update(overrides)
     return run
@@ -211,6 +212,24 @@ class ReviewTests(unittest.TestCase):
         self.assertIn("The run reported `claude-haiku-5-5` instead.", line)
         self.assertNotIn("credits", line)
 
+    def test_model_line_says_when_the_droid_file_was_overridden(self):
+        line = triage.model_line(run_dict(overrides="gpt-5.4-mini"))
+        self.assertIn("`gemini-3.8-flash`, set on the command line or by TRIAGE_MODEL in "
+                      "place of the `gpt-5.4-mini` named in `.factory/droids/triage.md`",
+                      line)
+        failed = triage.model_line(run_dict(ok=False, error="boom", overrides="gpt-5.4-mini"))
+        self.assertIn("in place of the `gpt-5.4-mini`", failed)
+        # The droid file could not be read, so there is no named model to mention.
+        unreadable = triage.model_line(run_dict(overrides=""))
+        self.assertIn("`gemini-3.8-flash`, set on the command line or by TRIAGE_MODEL, "
+                      "reasoning", unreadable)
+        self.assertNotIn("named in", unreadable)
+
+    def test_model_line_shows_an_effort_other_than_the_one_asked_for(self):
+        self.assertIn("reasoning effort `medium`. 42 s", triage.model_line(run_dict()))
+        self.assertIn("reasoning effort `high` (asked for `medium`). 42 s",
+                      triage.model_line(run_dict(effort="high")))
+
 
 class DroidRunTests(unittest.TestCase):
     def fake_droid(self, directory, script):
@@ -238,6 +257,7 @@ class DroidRunTests(unittest.TestCase):
         self.assertTrue(run["ok"])
         self.assertEqual(run["model"], "gemini-3.8-flash")
         self.assertEqual((run["credits"], run["turns"]), (99, 3))
+        self.assertEqual((run["asked"], run["effort"]), ("medium", "medium"))
         self.assertEqual(run["text"], "the review")
         self.assertIn("$ droid exec --model gemini-3.8-flash", said[0])
         self.assertIn("model gemini-3.8-flash · reasoning medium · read-only", said[1])

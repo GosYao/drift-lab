@@ -50,4 +50,16 @@ if not runs_verifier:
     raise SystemExit("The Stop hook must run verify_fix.py --stop-hook "
                      "with a timeout of at least 120 seconds.")
 
+# A fix for a finding on an unmerged branch is a pull request into that branch.
+# The workflow has to run for it, with a judge that neither branch controls.
+workflow = (ROOT / ".github/workflows/pull-request.yml").read_text()
+trigger = re.search(r"^on:\n((?:[ #].*\n|\n)+)", workflow, re.M)
+if not trigger or "pull_request:" not in trigger.group(1) \
+        or re.search(r"^\s+branches", trigger.group(1), re.M):
+    raise SystemExit("The pull-request workflow must run on pull requests into "
+                     "any branch, not only the default one.")
+if 'git archive "origin/$DEFAULT_BRANCH"' not in workflow:
+    raise SystemExit("The verify-fix job must take the verifier and the scanner "
+                     "definition from the default branch.")
+
 print("Repository contracts and static DOM references: passed.")

@@ -1,3 +1,5 @@
+import contextlib
+import io
 import json
 import subprocess
 import sys
@@ -128,6 +130,31 @@ class GateTests(unittest.TestCase):
         self.assertEqual(verify_fix.gate_tests(directory, sys.executable, (ok, described)),
                          Gate("tests", FAIL, described))
 
+    def test_unittest_output_is_read_one_failure_at_a_time(self):
+        rule, dashes = "=" * 70 + "\n", "-" * 70 + "\n"
+        output = (
+            rule + "FAIL: test_payload (tests.test_app.AppTests.test_payload)\n"
+            "The payload must not run.\n" + dashes +
+            "Traceback (most recent call last):\n"
+            '  File "/repo/tests/test_app.py", line 9, in test_payload\n'
+            "    self.assertFalse(marker.exists(), 'the payload ran')\n"
+            "    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"
+            "AssertionError: True is not false : the payload ran\n"
+            "a second line of the message\n\n" +
+            rule + "ERROR: test_other (unittest.loader._FailedTest.test_other)\n" + dashes +
+            "ImportError: Failed to import test module: test_other\n"
+            "Traceback (most recent call last):\n"
+            '  File "/usr/lib/python3/unittest/loader.py", line 396, in _find_test_path\n'
+            "    module = self._get_module_from_name(name)\n"
+            "ModuleNotFoundError: No module named 'app.other'\n\n" +
+            dashes + "Ran 2 tests in 0.010s\n\nFAILED (failures=1, errors=1)\n")
+        found = [(kind, name, verify_fix.failure_reason(body))
+                 for kind, name, body in verify_fix.PROBLEM.findall(output)]
+        self.assertEqual(found, [
+            ("FAIL", "test_payload", "AssertionError: True is not false : the payload ran"),
+            ("ERROR", "test_other", "ModuleNotFoundError: No module named 'app.other'")])
+        self.assertEqual(verify_fix.assertion_failures({"problems": found}), found[:1])
+
 
 class RepositoryTests(unittest.TestCase):
     """Gates that read git. The base is a tree object, so no commit is needed."""
@@ -171,7 +198,8 @@ class RepositoryTests(unittest.TestCase):
         self.add_test("self.assertEqual(area(2, 3), 6)")
         gate = self.regression_gate()
         self.assertEqual(gate.status, PASS)
-        self.assertIn("fails on the base (FAIL: test_added", gate.detail)
+        self.assertIn("tests/test_calc.py fails on the base (FAIL: test_added: "
+                      "AssertionError: 5 != 6) and passes now", gate.detail)
 
     def test_a_test_that_passes_on_the_base_proves_nothing(self):
         self.write("calc.py", "def area(width, height):\n    return width * height\n")
@@ -179,6 +207,82 @@ class RepositoryTests(unittest.TestCase):
         gate = self.regression_gate()
         self.assertEqual(gate.status, FAIL)
         self.assertIn("passes on the base too", gate.detail)
+
+    def test_a_test_that_cannot_run_on_the_base_proves_nothing(self):
+        # The base has no perimeter(), so the test fails to import there. That
+        # shows nothing about how the base behaved.
+        self.write("calc.py", "def area(width, height):\n    return width + height\n\n\n"
+                              "def perimeter(width, height):\n"
+                              "    return 2 * (width + height)\n")
+        self.write("tests/test_perimeter.py",
+                   "import unittest\nfrom calc import perimeter\n\n\n"
+                   "class PerimeterTests(unittest.TestCase):\n"
+                   "    def test_square(self):\n"
+                   "        self.assertEqual(perimeter(1, 1), 4)\n")
+        gate = self.regression_gate()
+        self.assertEqual(gate.status, FAIL)
+        self.assertEqual(gate.detail, "tests/test_perimeter.py does not fail an assertion "
+                                      "on the base (ERROR: test_perimeter), so it does not "
+                                      "prove the fix")
+
+    def test_a_crash_on_the_base_is_not_an_assertion(self):
+        # scale= does not exist on the base, so the new test raises TypeError there.
+        self.write("calc.py", "def area(width, height, scale=1):\n"
+                              "    return (width + height) * scale\n")
+        self.add_test("self.assertEqual(area(1, 1, scale=2), 4)")
+        gate = self.regression_gate()
+        self.assertEqual(gate.status, FAIL)
+        self.assertIn("does not fail an assertion on the base (ERROR: test_added)",
+                      gate.detail)
+
+    def test_red_green_shows_the_assertion_that_fails_on_the_base(self):
+        self.assertEqual(verify_fix.red_green(self.root, self.base),
+                         ("red-green: no test file under tests/ was added or changed",
+                          False))
+        self.write("calc.py", "def area(width, height):\n    return width * height\n")
+        self.add_test("self.assertEqual(area(2, 3), 6)")
+        text, proven = verify_fix.red_green(self.root, self.base)
+        self.assertTrue(proven)
+        self.assertTrue(text.startswith("red-green: tests/test_calc.py\n"))
+        self.assertRegex(text, r"  RED    on the base \w+: 1 of 2 did not pass\n"
+                               r"         FAIL: test_added\n"
+                               r"         AssertionError: 5 != 6\n"
+                               r"  GREEN  on this tree: 2 tests pass\n")
+        self.assertTrue(text.endswith("passes after it."))
+        self.assertIn("\033[1;31mRED  \033[0m",
+                      verify_fix.red_green(self.root, self.base, color=True)[0])
+
+    def test_red_green_refuses_what_the_gate_refuses(self):
+        self.write("calc.py", "def area(width, height):\n    return width * height\n")
+        self.add_test("self.assertEqual(area(2, 2), 4)")
+        text, proven = verify_fix.red_green(self.root, self.base)
+        self.assertFalse(proven)
+        self.assertRegex(text, r"  GREEN  on the base \w+: 2 tests pass\n")
+        self.assertTrue(text.endswith("pass on this tree."))
+        # A test that fails here is not run on the base. (The second test_added
+        # replaces the first: one name, one method.)
+        self.add_test("self.assertEqual(area(2, 3), 7)")
+        text, proven = verify_fix.red_green(self.root, self.base)
+        self.assertFalse(proven)
+        self.assertNotRegex(text, r"on the base \w+:")
+        self.assertIn("  RED    on this tree: 1 of 2 did not pass", text)
+
+    def test_one_proving_test_file_is_enough_among_several(self):
+        # The fix also touches a test file that passes both ways. The gate and
+        # red-green must agree that the other file still proves the fix.
+        self.write("calc.py", "def area(width, height):\n    return width * height\n")
+        self.add_test("self.assertEqual(area(2, 3), 6)")
+        self.write("tests/test_other.py",
+                   "import unittest\n\n\n"
+                   "class OtherTests(unittest.TestCase):\n"
+                   "    def test_true(self):\n"
+                   "        self.assertTrue(True)\n")
+        self.assertEqual(self.regression_gate().status, PASS)
+        text, proven = verify_fix.red_green(self.root, self.base)
+        self.assertTrue(proven)
+        self.assertRegex(text, r"red-green: tests/test_other.py\n\n"
+                               r"  GREEN  on the base \w+: 1 test passes\n")
+        self.assertTrue(text.endswith("passes after it."))
 
     def test_a_fix_without_a_test_is_refused(self):
         self.write("calc.py", "def area(width, height):\n    return width * height\n")
@@ -208,6 +312,56 @@ class RepositoryTests(unittest.TestCase):
     def test_policy_gate_skips_when_infra_is_unchanged(self):
         self.assertEqual(verify_fix.gate_policy_test(self.root, {"calc.py": "M"}),
                          Gate("policy-test", SKIP, "infra/ unchanged"))
+
+    def commit(self, *parents):
+        """Commit the working tree as a raw object: no identity, no signature."""
+        git(self.root, "add", "-A")
+        lines = ["tree " + git(self.root, "write-tree").strip()]
+        lines += ["parent " + parent for parent in parents]
+        lines += ["author Fixture <fixture@example.invalid> 0 +0000",
+                  "committer Fixture <fixture@example.invalid> 0 +0000", "", "fixture", ""]
+        return subprocess.run(["git", "hash-object", "-t", "commit", "-w", "--stdin"],
+                              cwd=str(self.root), input="\n".join(lines), check=True,
+                              capture_output=True, text=True).stdout.strip()
+
+    def command_line(self, *arguments):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = verify_fix.main(["--root", str(self.root), *arguments])
+        return code, out.getvalue(), err.getvalue()
+
+    def test_the_command_line_shows_red_green_against_a_base_in_the_history(self):
+        base = self.commit()
+        self.write("calc.py", "def area(width, height):\n    return width * height\n")
+        self.add_test("self.assertEqual(area(2, 3), 6)")
+        git(self.root, "update-ref", "HEAD", self.commit(base))
+        code, out, _ = self.command_line("--base", base, "--red-green")
+        self.assertEqual(code, 0)
+        self.assertIn("  RED    on the base {}: 1 of 2 did not pass".format(base[:7]), out)
+        self.assertIn("Proven: ", out)
+
+    def test_the_command_line_refuses_a_base_beside_this_branch(self):
+        # main moved on after this branch was cut. Compared with the new main,
+        # the branch's older test file would look like a test the fix changed.
+        base = self.commit()
+        self.write("calc.py", "def area(width, height):\n    return width * height\n")
+        self.write("tests/test_calc.py",
+                   (self.root / "tests/test_calc.py").read_text()
+                   .replace("area(0, 0), 0", "area(2, 3), 6"))
+        newer = self.commit(base)
+        self.write("calc.py", "def area(width, height):\n    return width + height\n")
+        self.write("tests/test_calc.py",
+                   (self.root / "tests/test_calc.py").read_text()
+                   .replace("area(2, 3), 6", "area(2, 3), 5"))
+        git(self.root, "update-ref", "HEAD", self.commit(base))
+        # The gate alone is fooled: the stale test fails on the newer code.
+        changes = verify_fix.changed_files(self.root, newer)
+        self.assertEqual(verify_fix.gate_regression_test(
+            self.root, newer, changes, sys.executable).status, PASS)
+        for arguments in (["--red-green"], []):
+            code, out, err = self.command_line("--base", newer, *arguments)
+            self.assertEqual((code, out), (2, ""))
+            self.assertIn("base {} is not in this tree's history".format(newer), err)
 
 
 class StopHookTests(unittest.TestCase):

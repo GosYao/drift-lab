@@ -46,7 +46,7 @@ Phase 1 is **not complete** against its exit criteria. Not yet done:
 
 ## Phase 0 — local prototype (complete)
 
-- 140 unit tests pass (`make test`); `make check` and `make terraform-check` pass.
+- 150 unit tests pass (`make test`); `make check` and `make terraform-check` pass.
 - `make policy-test` (capability-intent Terraform tests, mock providers, no
   credentials) passes on the approved revision and fails on a seeded IAM
   broadening.
@@ -61,14 +61,17 @@ Phase 1 is **not complete** against its exit criteria. Not yet done:
   verified live read-only collection, but the preview UI still replays fixtures.
 - **The PR workflow now runs the full findings-to-verified-fix loop.**
   Deterministic gates (tests, terraform-check + policy-test, Semgrep, Trivy),
-  a `verify-fix` job on `fix/` branches (no new suppression, regression test
-  fails-before/passes-after, suite, policy test, both scanners; the judge is
-  taken from the base revision), and a credential-separated review that posts
-  one packet per finding over computed evidence (scanner findings, gate
-  outcomes, chained exposure, diff) with a fail-safe that keeps the scanner's
-  severity. The earlier review arm was verified live on seeded PR #1 (0.7.2);
-  the new loop is verified locally, and seeded PR #2 plus the fix PR are built
-  next and not yet pushed. The GitHub panel in the UI remains a fixture preview.
+  a `verify-fix` job on `fix/` branches (no new suppression, a regression
+  test that fails an assertion on the base and passes now, suite, policy
+  test, both scanners; the judge is taken from the default branch), and a
+  credential-separated review that posts one packet per finding over computed
+  evidence (scanner findings, gate outcomes, chained exposure, diff) with a
+  fail-safe that keeps the scanner's severity. The workflow runs on pull
+  requests into any branch, so a fix targets the branch that has the finding
+  and is compared with the vulnerable code. The earlier review arm was
+  verified live on seeded PR #1 (0.7.2). The new loop is verified locally
+  only: the seeded branch for PR #2 and its fix branch exist and are not yet
+  pushed. The GitHub panel in the UI remains a fixture preview.
 - **Real agent egress is blocked by design.** Pod Identity credentials, DNS, and
   DynamoDB need a reviewed egress allow-list before a real agent replaces the
   fixture viewer.

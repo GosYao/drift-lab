@@ -302,7 +302,8 @@ def run_droid(prompt_file, model, effort, root, timeout=TIMEOUT_SECONDS,
               say=lambda line: None, binary=None):
     """Run the model read-only on the prompt and report what happened. Never raises."""
     run = {"ok": False, "text": "", "requested": model, "model": None, "effort": None,
-           "credits": None, "seconds": None, "turns": None, "session": None, "error": ""}
+           "asked": effort, "credits": None, "seconds": None, "turns": None,
+           "session": None, "error": ""}
     binary = binary or droid_binary()
     if not binary:
         run["error"] = "the droid CLI is not installed"
@@ -406,6 +407,11 @@ def fail_safe(evidence, finding):
 
 def model_line(run):
     named = "`{}`, named in `{}`".format(run["requested"], DROID_FILE)
+    if "overrides" in run:
+        named = "`{}`, set on the command line or by TRIAGE_MODEL".format(run["requested"])
+        if run["overrides"]:
+            named += " in place of the `{}` named in `{}`".format(run["overrides"],
+                                                                 DROID_FILE)
     if not run["ok"]:
         return "**Triage model:** {}. It did not produce a usable result: {}.".format(
             named, run["error"] or "see above")
@@ -417,6 +423,8 @@ def model_line(run):
     if run["credits"] is not None:
         numbers.append("{} Factory credits".format(run["credits"]))
     effort = ", reasoning effort `{}`".format(run["effort"]) if run["effort"] else ""
+    if effort and run.get("asked") and run["asked"] != run["effort"]:
+        effort += " (asked for `{}`)".format(run["asked"])
     return "**Triage model:** {}{}.{} {}.".format(named, effort, ran, ", ".join(numbers))
 
 
@@ -488,11 +496,13 @@ def main(argv=None):
     if droid_error:
         say("triage: " + UNAVAILABLE.lower() + " " + droid_error)
         run = {"ok": False, "text": "", "requested": model, "model": None,
-               "effort": None, "credits": None, "seconds": None, "turns": None,
-               "session": None, "error": droid_error}
+               "effort": None, "asked": None, "credits": None, "seconds": None,
+               "turns": None, "session": None, "error": droid_error}
     else:
         run = run_droid(prompt, model, meta.get("reasoningEffort"), ROOT,
                         args.timeout, say)
+    if args.model and args.model != meta.get("model"):
+        run["overrides"] = meta.get("model")
     review, usable = compose(evidence, run)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(review)

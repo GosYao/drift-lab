@@ -27,8 +27,9 @@
 name: pull-request
 
 on:
+  # Every pull request, whatever branch it targets: the fix for a finding
+  # that lives on an unmerged branch is a pull request into that branch.
   pull_request:
-    branches: [main]
     types: [opened, synchronize, reopened]
 
 # Least privilege by default; each job elevates only what it needs.
@@ -124,8 +125,9 @@ jobs:
     name: verify-fix (fix/ branches)
     # Only a branch named fix/* claims to fix a finding; only those get the
     # fix-evidence gates. The judge (the verifier and the scanner definition)
-    # is taken from the base revision, so the fix cannot change the checks
-    # that judge it.
+    # is taken from the default branch, so neither the fix nor the branch it
+    # targets can change the checks that judge it. The fix is compared with
+    # the pull request's base: the code that has the finding.
     if: startsWith(github.event.pull_request.head.ref, 'fix/')
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -147,9 +149,13 @@ jobs:
       - name: Verify the fix
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          git archive "$BASE_SHA" scripts/verify_fix.py scripts/scanners.py \
-            | tar -x -C /tmp
+          # Public repository: reading the default branch needs no credentials.
+          git fetch --no-tags origin \
+            "+refs/heads/$DEFAULT_BRANCH:refs/remotes/origin/$DEFAULT_BRANCH"
+          git archive "origin/$DEFAULT_BRANCH" \
+            scripts/verify_fix.py scripts/scanners.py | tar -x -C /tmp
           python3 /tmp/scripts/verify_fix.py --root "$PWD" --base "$BASE_SHA" \
             --scan-base --report "$RUNNER_TEMP/fix-evidence.md"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -1,8 +1,8 @@
 ---
 name: triage
 description: Turn computed scanner and gate evidence into one review packet per finding. Read-only; recommends, never decides.
-model: gpt-5.4-mini
-reasoningEffort: medium
+model: glm-5.3-flash
+reasoningEffort: high
 tools: read-only
 ---
 

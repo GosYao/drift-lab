@@ -33,9 +33,11 @@ and what is not. Cloud steps are authorization-gated and documented in
   (scanner output, gate outcomes, chained exposure, diff), with a fail-safe
   that keeps the scanner's severity when the model cannot answer.
 - A verified-fix loop: on `fix/` branches a Stop hook and a pipeline job run
-  the same gates (no new suppression, a regression test that fails on the base
-  and passes after, the unit suite, the policy test, both pinned scanners), so
-  "fixed" is a reproducible state a person approves, not a model's claim.
+  the same gates (no new suppression, a regression test that fails an
+  assertion on the base and passes after, the unit suite, the policy test,
+  both pinned scanners), so "fixed" is a reproducible state a person
+  approves, not a model's claim. The regression test reproduces the exploit
+  with a harmless payload; `make red-green` shows it before and after.
 - A local preview UI with the graph, findings, a written brief, scenario replay,
   and JSON export.
 - Three Terraform stacks (foundation, EKS lab, workloads) with an explicit security
@@ -54,6 +56,7 @@ make preflight        # local environment preflight
 make scan             # Semgrep + Trivy from the pinned images (needs Docker)
 make triage           # one review packet per finding (needs the droid CLI)
 make verify-fix       # the gates a security fix must pass
+make red-green        # the fix's regression test on the base, then on this tree
 make install          # install requirements.txt into .venv, when a branch has one
 make demo-reset       # clear Stop-hook state and scratch directories
 ```
@@ -94,7 +97,8 @@ See `AGENTS.md` for the full set. The short version:
 - Raw Terraform state and plans never enter reports or prompts; the sanitizer runs
   first.
 - No suppressions to turn a check green; a security fix needs a regression test
-  that fails before and passes after, and `make verify-fix` must say VERIFIED.
+  that reproduces the exploit, fails before the fix and passes after, and
+  `make verify-fix` must say VERIFIED.
 - Infrastructure planning uses the approved deployment revision, not PR-supplied
   code. Application, deployment, and publishing credentials stay separate.
 

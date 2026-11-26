@@ -2,6 +2,69 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-11-26 — The verifier asked too little of the regression test (0.8.1)
+
+### What went wrong
+
+- Running the pipeline's verify-fix step locally, before any push, showed
+  that the fix pull request as planned (into `main`) would be VERIFIED on
+  evidence that proved nothing. The finding lives on the unmerged seeded
+  branch, so on `main` the module under test does not exist. The regression
+  test failed to import there, and the gate counted that error as "fails on
+  the base". Both base scans reported no findings, because `main` never had
+  them. Every gate was green and none of them had shown the vulnerability.
+- A local test merge of the fix branch into `main` also conflicted in this
+  file. GitHub does not run `pull_request` workflows for a pull request with
+  a merge conflict, so the checks would not have started at all.
+- Checking the new refusal by hand turned up a second false proof. A fix
+  branch cut from an older `main`, compared with the current `main`, had an
+  out-of-date copy of a test file. The gate took it for the regression test:
+  it fails an assertion on the newer code and passes on the branch's older
+  code. The verifier now refuses a base that is not in the tree's history.
+  The pipeline was never exposed, because it verifies the merge commit.
+- Nothing was pushed with that evidence.
+
+### Done
+
+- `regression-test` now needs a changed test to fail an assertion on the
+  base. An import error or a crash there is refused and named in the gate's
+  detail. `make red-green` shows the same evidence: the changed tests on the
+  base, then on this tree.
+- AGENTS.md and the fix droid ask for a regression test that reproduces the
+  exploit through the entry point an attacker would use, with a harmless
+  marker file as the effect.
+- The workflow runs on pull requests into any branch, and the verify-fix job
+  takes its judge from the default branch. A repository contract keeps both.
+- The review's model line reports an override of the droid file, and a
+  reasoning effort other than the one asked for.
+- 150 unit tests pass (`make check`), on Python 3.14 and the system 3.9.
+
+### Decisions
+
+- A fix pull request targets the branch that has the finding, not `main`.
+  The seeded fix goes into `feature/scenarios-from-yaml`, and merging it is
+  what clears PR #2. Compared with that base the regression test fails an
+  assertion, and both scanners report the findings the fix removes.
+- Triage model: `glm-5.3-flash`. Compared with `mistral-medium-3.5` on the
+  vulnerable branch, the fix branch, and the test merge of PR #1. glm took 16
+  to 86 s and 771 to 1,099 Factory credits a run, kept "the vulnerable
+  version is installed" apart from "the vulnerable function is called", and
+  named the PR #1 chain. mistral used about 13,000 credits a run, said the
+  advisory's function was called, and missed the packet format on the PR #1
+  shape (the fail-safe published "Triage unavailable" as designed). Both
+  report reasoning effort `high` when asked for `medium`, so the droid file
+  now asks for `high`.
+
+### Not done
+
+- Still nothing pushed. Branch protection on `main` does not cover a pull
+  request into a feature branch: protect `feature/**` as well when the GitHub
+  writes are authorized. How GitHub runs the workflow on that pull request is
+  unconfirmed until then.
+- The verifier does not read assertions. One rewritten in place to check
+  less, with the count unchanged, passes `no-new-suppression`; the reviewer
+  reads the test diff.
+
 ## 2026-11-26 — Local history and status cleanup
 
 - With user authorization, removed the stray shell line from the unpublished
@@ -47,6 +110,7 @@ Running record of what was done, decided, and deliberately not done. Newest firs
 - Nothing is pushed. main, the seeded branch, and the fix branch wait for
   authorization, then PR #2, the fix PR, branch protection on main, merging
   main into PR #1's branch, and the collaborator invite.
+
 ## 2026-11-26 — Findings to verified fixes: the loop (0.8.0)
 
 ### Done

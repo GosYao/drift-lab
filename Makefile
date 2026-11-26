@@ -4,7 +4,7 @@ PYTHON := $(if $(wildcard .venv/bin/python),.venv/bin/python,$(PYTHON))
 TERRAFORM ?= $(if $(wildcard .tools/terraform),.tools/terraform,terraform)
 
 .PHONY: preview test check install report preflight terraform-check policy-test \
-	scan triage verify-fix demo-reset
+	scan triage verify-fix red-green demo-reset
 
 preview:
 	$(PYTHON) -m drift_lab serve
@@ -68,6 +68,11 @@ triage:
 # and both scanners. The Stop hook runs the same check on fix/ branches.
 verify-fix:
 	$(PYTHON) scripts/verify_fix.py
+
+# The regression-test gate's evidence, shown: the fix's changed tests run on
+# the base (red), then on this tree (green).
+red-green:
+	$(PYTHON) scripts/verify_fix.py --red-green
 
 # Demo hygiene: clear the Stop hook's verified state (including linked
 # worktrees) and the triage and scanner scratch directories.
