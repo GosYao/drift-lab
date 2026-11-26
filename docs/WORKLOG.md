@@ -2,6 +2,38 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-11-26 — Rehearsal of the loop, and one parser fix (0.8.0)
+
+### Done
+
+- Rehearsed the full loop in worktrees. The seeded branch
+  (`feature/scenarios-from-yaml`, 1c35d38) is red on both scanners exactly as
+  designed, and posting `!!python/object/apply:eval` to the import endpoint
+  returns 200 on PyYAML 5.3.1. The prepared suppression branch is refused:
+  scanners green, `no-new-suppression` and `regression-test` FAIL.
+- `droid exec --auto medium -m gpt-5.5` produced the real fix in ~4.8 min
+  (`yaml.safe_load`, pin 5.3.1 -> 6.0.4, regression test); the Stop hook
+  verified it on the first stop with every gate PASS. Fix branch
+  `fix/yaml-safe-load` (9d7b887) verifies with the before/after record.
+- Rehearsed triage on three shapes: the vulnerable branch (true-positive
+  packets; the CVE packet separates "the vulnerable version is installed"
+  from "the vulnerable function is called"), the fix branch (VERDICT: no
+  issues found, plus the fix evidence), and a test merge of main into PR #1's
+  branch (policy-test packet; VERDICT: request changes).
+- Fixed `policy_findings` for terraform's real output: run lines on stdout,
+  Error diagnostics on stderr inside box-drawing frames. Diagnostics are
+  matched to runs by name, and an unrecognized format degrades to a fallback
+  location instead of losing the finding. Tests use the framed shape.
+- Decisions: triage droid `gpt-5.4-mini` (gemini-3.8-flash errors on this
+  org; the fail-safe published correctly when it did), fix droid `gpt-5.5`;
+  "spring 2027" in speech; a second GitHub account as collaborator for the
+  reviewer identity.
+
+### Not done
+
+- Nothing is pushed. main, the seeded branch, and the fix branch wait for
+  authorization, then PR #2, the fix PR, branch protection on main, merging
+  main into PR #1's branch, and the collaborator invite.
 ## 2026-11-26 — Findings to verified fixes: the loop (0.8.0)
 
 ### Done

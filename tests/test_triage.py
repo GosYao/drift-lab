@@ -77,27 +77,49 @@ class ContractTests(unittest.TestCase):
 
 
 class ParseTests(unittest.TestCase):
+    # Real terraform output shape: the run lines on stdout, then the Error
+    # diagnostic on stderr inside a box-drawing frame, so the diagnostic lands
+    # after the run lines and is matched to its run by name.
+    FAILED_POLICY_OUTPUT = (
+        '  run "support_agent_reads_only_orders"... fail\n'
+        '  run "namespace_is_isolated"... pass\n'
+        "policy.tftest.hcl... fail\n\nFailure! 4 passed, 1 failed.\n"
+        "╷\n"
+        "│ Error: Test assertion failed\n"
+        "│ \n"
+        '│   on policy.tftest.hcl line 69, in run "support_agent_reads_only_orders":\n'
+        "│   69:     condition     = jsondecode(aws_iam_role_policy.agent[\n"
+        "│     ├────────────────\n"
+        "│     │ Warning: LHS and RHS values are of different types\n"
+        "│     │ Diff:\n"
+        "│     │ --- actual\n"
+        "│     │ +++ expected\n"
+        "│ \n"
+        "support-agent must read only the customer-orders table.\n"
+        "╵\n")
+
     def test_policy_findings_names_the_failed_run_and_its_assertion(self):
-        output = (
-            "policy.tftest.hcl... in progress\n"
-            '  run "support_agent_reads_only_orders"... fail\n'
-            "\n"
-            "Error: Test assertion failed\n"
-            "\n"
-            "  on policy.tftest.hcl line 69, in run \"support_agent_reads_only_orders\":\n"
-            "  69:     condition     = jsondecode(aws_iam_role_policy.agent\n"
-            "\x1b[0m\x1b[1m\u2502 Warning: LHS and RHS values are of different types\n"
-            "\n"
-            "support-agent must read only the customer-orders table.\n"
-            '  run "reporting_agent_reads_orders_and_archive"... pass\n'
-            "policy.tftest.hcl... fail\n\nFailure! 4 passed, 1 failed.\n")
-        finding, = triage.policy_findings(output)
+        finding, = triage.policy_findings(self.FAILED_POLICY_OUTPUT)
+        self.assertEqual(finding["scanner"], "policy-test")
         self.assertEqual(finding["rule"], "support_agent_reads_only_orders")
         self.assertEqual(finding["location"], "infra/workloads/policy.tftest.hcl:69")
         self.assertEqual(finding["title"],
                          "support-agent must read only the customer-orders table.")
-        self.assertIn("jsondecode(", finding["message"])
+        self.assertEqual(finding["message"],
+                         "Failed assertion: jsondecode(aws_iam_role_policy.agent[")
 
+    def test_an_unframed_failure_still_yields_a_finding(self):
+        # If terraform's diagnostic format changes, the finding must survive
+        # with the fallback location and title rather than disappear.
+        output = (
+            '  run "support_agent_reads_only_orders"... fail\n'
+            '  run "namespace_is_isolated"... pass\n'
+            "policy.tftest.hcl... fail\n\nFailure! 4 passed, 1 failed.\n")
+        finding, = triage.policy_findings(output)
+        self.assertEqual(finding["rule"], "support_agent_reads_only_orders")
+        self.assertEqual(finding["location"], "infra/workloads/")
+        self.assertEqual(finding["title"], "A capability-intent assertion failed.")
+        self.assertEqual(finding["message"], "")
     def test_a_clean_policy_run_yields_no_findings(self):
         self.assertEqual(triage.policy_findings(
             '  run "a"... pass\n  run "b"... pass\nSuccess! 2 passed, 0 failed.\n'), [])

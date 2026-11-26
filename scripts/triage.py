@@ -94,28 +94,36 @@ def scanner_results(root, evidence_dir=None):
 
 
 def policy_findings(output):
-    """One finding per failed capability-intent run in `terraform test` output."""
+    """One finding per failed capability-intent run in `terraform test` output.
+
+    Terraform prints the `run "..."... fail` lines to stdout and the Error
+    diagnostics (file, line, condition, assert message) to stderr inside
+    box-drawing frames, so the two are matched by run name, not position.
+    """
+    text = ANSI.sub("", output)
+    diagnostics = {}
+    for match in re.finditer(
+            r"on (\S+) line (\d+), in run \"([^\"]+)\":\s*\n[│\s]*\d+:\s*condition\s*=\s*(.+)",
+            text):
+        tail = text[match.end():match.end() + 2000].split("╵", 1)[0]
+        said = [re.sub(r"^[│╷╵├─\s]+", "", line).strip() for line in tail.splitlines()]
+        said = [line for line in said if line and
+                not line.startswith(("Warning", "Diff", "+", "-", "[", "]"))]
+        diagnostics[match.group(3)] = (
+            match.group(1), match.group(2), match.group(4).strip(),
+            said[-1] if said else "")
     findings = []
-    parts = re.split(r'^\s*run "([^"]+)"\.\.\. (pass|fail)\s*$', ANSI.sub("", output),
-                     flags=re.M)
+    parts = re.split(r'^\s*run "([^"]+)"\.\.\. (pass|fail)\s*$', text, flags=re.M)
     for name, result, detail in zip(parts[1::3], parts[2::3], parts[3::3]):
         if result != "fail":
             continue
-        said = []
-        for line in detail.splitlines():
-            line = line.strip().lstrip("│├╷╵─ ").strip()
-            if re.match(r"\S+\.tftest\.hcl\.\.\.|(Failure|Success)!", line):
-                break
-            if line:
-                said.append(line)
-        where = re.search(r"on (\S+) line (\d+), in run", detail)
-        condition = re.search(r"^\W*\d+:\s*condition\s*=\s*(.+)$", detail, re.M)
-        location = POLICY_TESTS + "{}:{}".format(*where.groups()) if where else POLICY_TESTS
+        file, line, condition, message = diagnostics.get(name, (None, None, "", ""))
+        location = POLICY_TESTS + "{}:{}".format(file, line) if file else POLICY_TESTS
         findings.append({
             "scanner": "policy-test", "rule": name, "severity": "FAIL",
             "location": location, "key": "{} @ {}".format(name, location),
-            "title": said[-1] if said else "A capability-intent assertion failed.",
-            "message": "Failed assertion: " + condition.group(1).strip() if condition else "",
+            "title": message or "A capability-intent assertion failed.",
+            "message": "Failed assertion: " + condition if condition else "",
         })
     return findings
 
