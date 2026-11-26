@@ -6,9 +6,7 @@ import yaml
 def load_scenario(document):
     """Parse a YAML scenario definition into a dictionary."""
     try:
-        # Seeded for the scanner demo (PR #2, never merged, never deployed):
-        # the unsafe loader is deliberate so the seeded findings are real.
-        data = yaml.load(document, Loader=yaml.Loader)
+        data = yaml.safe_load(document)
     except yaml.YAMLError as error:
         raise ValueError("Invalid YAML document") from error
     if not isinstance(data, dict) or "scenario" not in data:

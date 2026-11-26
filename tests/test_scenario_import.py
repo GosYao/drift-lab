@@ -1,9 +1,12 @@
 import json
+from pathlib import Path
+import tempfile
+import textwrap
+import threading
 import unittest
 
 from drift_lab.scenario_import import load_scenario
 from tests.test_server import QuietHandler, ThreadingHTTPServer
-import threading
 
 
 class ScenarioImportTests(unittest.TestCase):
@@ -54,6 +57,21 @@ class ScenarioImportTests(unittest.TestCase):
     def test_import_endpoint_rejects_invalid_yaml(self):
         status, _ = self.request("/api/scenarios/import", {"document": "x: [unclosed\n"})
         self.assertEqual(status, 400)
+
+    def test_import_endpoint_does_not_apply_python_objects(self):
+        with tempfile.TemporaryDirectory() as directory:
+            marker = Path(directory) / "yaml-rce-marker"
+            document = textwrap.dedent("""
+                scenario: iam
+                attack: !!python/object/apply:builtins.open
+                  - "{marker}"
+                  - w
+                """).format(marker=marker)
+
+            status, _ = self.request("/api/scenarios/import", {"document": document})
+
+            self.assertFalse(marker.exists(), "unsafe YAML load created the marker file")
+            self.assertEqual(status, 400)
 
 
 if __name__ == "__main__":

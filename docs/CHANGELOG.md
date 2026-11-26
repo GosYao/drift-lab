@@ -3,6 +3,18 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.8.3 — 2026-11-26
+
+### Security
+
+- The scenario import parser uses `yaml.safe_load`, and the pinned PyYAML
+  dependency moves from 5.3.1 to 6.0.4.
+- Regression coverage for the scenario import endpoint: a malicious YAML tag
+  is posted through `/api/scenarios/import`, and the test asserts the marker
+  file side effect does not happen.
+- The unit suite now reports 157 tests, including the import exploit
+  regression.
+
 ## 0.8.2 — 2026-11-26
 
 ### Added
