@@ -7,6 +7,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from .engine import compare, replay
 from .github_view import TRIGGERS, preview
+from .scenario_import import load_scenario
 from .scenarios import SCENARIOS, scenario
 
 STATIC = Path(__file__).resolve().parent / "static"
@@ -61,7 +62,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_bytes(file.read_bytes(), types[file.suffix] + "; charset=utf-8")
 
     def do_POST(self):
-        if self.path != "/api/replay":
+        if self.path not in ("/api/replay", "/api/scenarios/import"):
             return self.send_json({"error": "Not found"}, 404)
         # No CORS; reject browser cross-origin requests even though replay is stateless.
         origin = self.headers.get("Origin")
@@ -74,6 +75,9 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(size))
             if not isinstance(payload, dict):
                 raise ValueError("Expected an object")
+            if self.path == "/api/scenarios/import":
+                return self.send_json(
+                    {"scenario": load_scenario(str(payload.get("document", "")))})
             expected, observed = scenario(payload.get("scenario", "iam"))
             if payload.get("baseline", False):
                 observed = expected
