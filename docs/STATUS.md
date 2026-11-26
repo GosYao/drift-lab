@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-11-15
+Last updated: 2026-11-26
 
 ## Phase 1 — sandbox deployment (in progress: stacks up, drift proven, teardown not yet proven)
 
@@ -46,7 +46,7 @@ Phase 1 is **not complete** against its exit criteria. Not yet done:
 
 ## Phase 0 — local prototype (complete)
 
-- 75 unit tests pass (`make test`); `make check` and `make terraform-check` pass.
+- 139 unit tests pass (`make test`); `make check` and `make terraform-check` pass.
 - `make policy-test` (capability-intent Terraform tests, mock providers, no
   credentials) passes on the approved revision and fails on a seeded IAM
   broadening.
@@ -59,14 +59,16 @@ Phase 1 is **not complete** against its exit criteria. Not yet done:
 
 - **Collectors are in; the UI is not.** `python -m drift_lab collect` performs
   verified live read-only collection, but the preview UI still replays fixtures.
-- **The PR workflow is fully verified live, including the Droid review arm.**
-  Pull requests to `main` run the deterministic gates (tests, terraform-check +
-  policy-test, Semgrep, Trivy) plus a credential-separated, read-only Droid
-  review. On seeded PR #1 (kept open as a live demo): every deterministic gate
-  green except the capability-intent gate, which fails on exactly the seeded
-  support-role broadening; the read-only review posted citing that gate and its
-  exact assertion, ending `VERDICT: request changes`. The GitHub panel in the
-  UI remains a fixture preview.
+- **The PR workflow now runs the full findings-to-verified-fix loop.**
+  Deterministic gates (tests, terraform-check + policy-test, Semgrep, Trivy),
+  a `verify-fix` job on `fix/` branches (no new suppression, regression test
+  fails-before/passes-after, suite, policy test, both scanners; the judge is
+  taken from the base revision), and a credential-separated review that posts
+  one packet per finding over computed evidence (scanner findings, gate
+  outcomes, chained exposure, diff) with a fail-safe that keeps the scanner's
+  severity. The earlier review arm was verified live on seeded PR #1 (0.7.2);
+  the new loop is verified locally, and seeded PR #2 plus the fix PR are built
+  next and not yet pushed. The GitHub panel in the UI remains a fixture preview.
 - **Real agent egress is blocked by design.** Pod Identity credentials, DNS, and
   DynamoDB need a reviewed egress allow-list before a real agent replaces the
   fixture viewer.

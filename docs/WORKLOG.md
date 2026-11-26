@@ -2,6 +2,71 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-11-26 — Findings to verified fixes: the loop (0.8.0)
+
+### Done
+
+- Built the loop that turns findings into verified fixes, on top of the existing
+  gates: `scripts/scanners.py` (one pinned scanner definition, normalized
+  findings, fail-closed when a scanner cannot run), `scripts/verify_fix.py`
+  (the fix gates: no new suppression, regression test fails on the base and
+  passes now, unit suite against pinned dependencies, policy test when infra
+  changed, both scanners), the Stop hook in `.factory/hooks.json` (verifies on
+  `fix/` branches, three blocks, then gives up NOT VERIFIED),
+  `scripts/chained_exposure.py` (Terraform + git computation of which identity
+  a changed workload runs as, what it can read, and which other branches touch
+  the same policy or code), and `scripts/triage.py` with
+  `.factory/droids/triage.md` (computed evidence in, one packet per finding
+  out, fail-safe that keeps the scanner's severity).
+- Pipeline: scanner jobs upload findings artifacts even on failure; a
+  `verify-fix` job runs on `fix/` branches with the judge taken from the
+  base revision; the review job assembles packets via `scripts/triage.py`;
+  the two-job credential split (Factory key vs GitHub token) is unchanged.
+  `.github/droid-review-prompt.md` removed, replaced by the droid file plus
+  computed evidence.
+- AGENTS.md gained the two security-fix rules (no suppressions; regression
+  test plus VERIFIED before a fix is done); README, RUNBOOK, DEMO, STATUS
+  updated; the external scanner's name scrubbed from DEMO.md, WORKLOG.md and
+  the interactive demo page (current files only); DEMO.md's optional UI step
+  removed.
+- 139 unit tests pass (`make check`), including the new suites for scanner
+  classification, suppression and regression gates, the hook's block cap,
+  chained-exposure parsing, and packet composition with its fail-safe. Both
+  scanners run clean on main through `scripts/scanners.py`; the workflow
+  YAML parses and the job graph is as designed.
+
+### Not done
+
+- Seeded PR #2 (vulnerable YAML import), the fix branch, and the rehearsal
+  with the real models: next steps, verified locally before any push.
+- GitHub writes (pushing main and branches, opening the PRs, merging main
+  into PR #1's branch, branch protection, the second collaborator account)
+  all await explicit user authorization.
+- The recording and the snippets file.
+
+### Decisions
+
+- The triage model is named in `.factory/droids/triage.md`, not in a
+  pipeline variable: `droid exec` cannot delegate to a custom droid (no Task
+  tool in exec), so the droid file is the single reviewed copy of the model,
+  the tool policy (read-only), and the packet format; `check_repository.py`
+  fails when the contract breaks (model inherited instead of named, format
+  phrases removed, Stop hook missing or short-timeout).
+- The verify-fix job takes the verifier and the scanner definition from the
+  base revision (`git archive` of the base), so the fix cannot change the
+  checks that judge it; the same JUDGES list is enforced locally by the
+  no-new-suppression gate.
+- The Stop hook only acts on `fix/` branches whose tree differs from the
+  base, so read-only sessions and ordinary branches are never blocked; a tree
+  that already passed is not verified again (fingerprint in the git dir).
+- The triage packet recommends but never changes a check result; the posted
+  review carries the model's packets above the computed evidence, and a
+  model failure is published as "Triage unavailable, human review required."
+  instead of being retried into a guess.
+- macOS Docker cannot mount the system temp directory (an unshared path
+  mounts empty and a scanner then reports nothing), so scanner exports live
+  in `.verify-tmp/` inside the repository and Trivy probes the mount first.
+
 ## 2026-11-15 — Folded demo plan; Phase 1 hardening of the reference build (0.7.5)
 
 ### Done
@@ -142,7 +207,7 @@ Running record of what was done, decided, and deliberately not done. Newest firs
     "support-agent must read only the customer-orders table"
   - `droid availability`: pass (FACTORY_API_KEY still unset)
   - `droid review (read-only)` / `post droid review`: skipped, as designed
-- Cross-arm observation, recorded factually: the external Lacework IAC and SCA
+- Cross-arm observation, recorded factually: the external IAC and SCA
   checks (partner-demo account) reported pass on the same seeded broadening.
   Generic compliance packs do not encode this lab's capability intent; the
   repo's own policy-as-code does. One seeded case, no generalization beyond

@@ -29,7 +29,13 @@ and what is not. Cloud steps are authorization-gated and documented in
   runs with mock providers; a seeded IAM broadening fails them.
 - A pull-request workflow where deterministic gates decide and a read-only
   Droid review with separate credentials explains the findings instead of
-  re-deciding them.
+  re-deciding them: one review packet per finding over computed evidence
+  (scanner output, gate outcomes, chained exposure, diff), with a fail-safe
+  that keeps the scanner's severity when the model cannot answer.
+- A verified-fix loop: on `fix/` branches a Stop hook and a pipeline job run
+  the same gates (no new suppression, a regression test that fails on the base
+  and passes after, the unit suite, the policy test, both pinned scanners), so
+  "fixed" is a reproducible state a person approves, not a model's claim.
 - A local preview UI with the graph, findings, a written brief, scenario replay,
   and JSON export.
 - Three Terraform stacks (foundation, EKS lab, workloads) with an explicit security
@@ -45,9 +51,16 @@ make terraform-check  # terraform fmt -check + init -backend=false + validate
 make policy-test      # capability-intent terraform tests; mock providers, no credentials
 make report           # print the iam scenario report as JSON
 make preflight        # local environment preflight
+make scan             # Semgrep + Trivy from the pinned images (needs Docker)
+make triage           # one review packet per finding (needs the droid CLI)
+make verify-fix       # the gates a security fix must pass
+make install          # install requirements.txt into .venv, when a branch has one
+make demo-reset       # clear Stop-hook state and scratch directories
 ```
 
-Python 3.9+ is the only runtime requirement. `scripts/bootstrap_local_tools.py`
+Python 3.9+ is the only runtime requirement on main. A branch that adds a
+dependency pins it in `requirements.txt`; `make install` installs it into
+`.venv` and the tooling (tests, verifier) uses that interpreter automatically. `scripts/bootstrap_local_tools.py`
 installs checksum-pinned Terraform 1.13.5 and agent-browser 0.40.0 into `.tools/`
 if you want the exact versions this prototype was validated with.
 
@@ -58,8 +71,9 @@ if you want the exact versions this prototype was validated with.
 | `drift_lab/` | Local engine: scenarios, comparison, plan sanitizer, collector, server, UI |
 | `tests/` | `unittest` suite (engine, sanitizer, collector, server) |
 | `configs/` | Lab topology for the live collector (non-secret names only) |
-| `.github/` | PR workflow: deterministic gates + credential-separated Droid review |
-| `scripts/` | Preflight, repository contract checks, pinned-tool bootstrap |
+| `.github/` | PR workflow: deterministic gates + verify-fix + credential-separated review packets |
+| `scripts/` | Preflight, repository contracts, tool bootstrap, scanner runner, triage packets, chained exposure, fix verifier |
+| `.factory/` | The agent harness: triage and fix droids with named models, and the Stop hook that runs the verifier |
 | `infra/foundation` | State bucket, ECR, GitHub OIDC observer role, budget |
 | `infra/eks-lab` | VPC, private-endpoint EKS cluster, managed node group |
 | `infra/workloads` | Namespace, service accounts, Pod Identity roles, synthetic tables, preview app |
@@ -79,6 +93,8 @@ See `AGENTS.md` for the full set. The short version:
   authorization.
 - Raw Terraform state and plans never enter reports or prompts; the sanitizer runs
   first.
+- No suppressions to turn a check green; a security fix needs a regression test
+  that fails before and passes after, and `make verify-fix` must say VERIFIED.
 - Infrastructure planning uses the approved deployment revision, not PR-supplied
   code. Application, deployment, and publishing credentials stay separate.
 

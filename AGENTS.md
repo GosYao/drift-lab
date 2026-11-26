@@ -6,6 +6,11 @@
   AWS collection, exploitation, or an actual Droid investigation.
 - Detection and graph construction are deterministic. A model may explain evidence;
   it cannot fabricate graph edges or make the trusted validation decision.
+- Never add a suppression to turn a check green: no `nosemgrep`, no ignore-file
+  entries, no weaker scanner command. Accepting risk is a human decision with a
+  recorded rationale in `docs/WORKLOG.md`.
+- A security fix needs a regression test that fails before the fix and passes
+  after, and `make verify-fix` must report VERIFIED before the fix is called done.
 - Do not put credentials, raw Terraform state, raw plans, or customer data in reports.
 - No AWS provisioning, GitHub writes, or automatic reconciliation without authorization.
 - Test with `make test`. Run `make check` for the complete locally available checks.

@@ -233,7 +233,7 @@
       <p><b>Two reasons, both demonstrated here.</b></p>
       <p><b>1. Generic rules, not your intent.</b> The seeded support-role broadening —
       support-agent silently gaining read on customer-archive — <b>passed</b> the external
-      Lacework IAC and SCA checks on the same PR where the intent-encoded gate failed it.
+      IAC and SCA checks on the same PR where the intent-encoded gate failed it.
       One seeded case, recorded factually: compliance packs check industry rules; they do
       not carry your intent.</p>
       <p><b>2. Noise.</b> Raw plan output buries the two lines that matter under version
@@ -291,7 +291,7 @@
   <div id="gateDetail" role="tabpanel" aria-live="polite"></div>
 
   <p class="note" style="margin-top:16px">
-    Verdicts reproduce the recorded CI run (41073964551) on PR #1. The external Lacework
+    Verdicts reproduce the recorded CI run (41073964551) on PR #1. The external IAC/SCA
     checks are shown as observed on that PR: pass. One seeded case — the point is the
     mechanism, not a tool comparison. The capability gate runs against mock providers:
     no cloud credentials, no AWS access.
@@ -414,7 +414,7 @@ var steps = [
       + "(4 runs pass, 1 fails). <span class='mono'>make check</span>, Semgrep, Trivy: green.</p>"
       + "<p><b>Say:</b> everything a commodity scanner can see is fine here. The only thing "
       + "that caught it is encoded intent — because the intent is ours. No vendor has it.</p>"
-      + "<p class='note'>Optional contrast on the same PR: external Lacework IAC and SCA checks, green.</p>"
+      + "<p class='note'>Optional contrast on the same PR: external IAC and SCA checks, green.</p>"
   },
   {
     t: "2. The agent's review, already posted", time: "3 min",
@@ -491,8 +491,8 @@ var gates = [
   { n: "terraform-check", sub: "fmt + validate", v: "pass", d: "Valid HCL, formatting clean. Structure is not the issue either.", t: "~6s" },
   { n: "semgrep", sub: "OWASP Top 10", v: "pass", d: "310 rules over 56 files, 0 findings. The broadening is not a vulnerability pattern — nothing is exploitable, nothing is secret-shaped.", t: "19–26s" },
   { n: "trivy", sub: "vuln + secret", v: "pass", d: "No vulnerabilities, no secrets. Clean from a supply-chain view.", t: "15–18s" },
-  { n: "Lacework IAC", sub: "external check", v: "pass", d: "No violations found (as observed on the PR). Generic compliance packs check industry rules — not this lab's capability intent.", t: "as observed" },
-  { n: "Lacework SCA", sub: "external check", v: "pass", d: "No vulnerabilities found (as observed on the PR).", t: "as observed" },
+  { n: "External IAC", sub: "vendor check", v: "pass", d: "No violations found (as observed on the PR). Generic compliance packs check industry rules — not this lab's capability intent.", t: "as observed" },
+  { n: "External SCA", sub: "vendor check", v: "pass", d: "No vulnerabilities found (as observed on the PR).", t: "as observed" },
   { n: "policy-test", sub: "capability intent", v: "fail",
     d: "<b>support_agent_reads_only_orders — 4 passed, 1 failed.</b><br>Assertion: "
       + "<span class='mono'>jsondecode(aws_iam_role_policy.agent[\"support-agent\"].policy).Statement[0].Resource "

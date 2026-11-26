@@ -1,21 +1,26 @@
 # Demo flow
 
-The end-to-end demo of Drift Lab. Everything in this script is verified
-against a pushed commit, a recorded CI run, or a documented decision; nothing
-below describes fixture replay as live evidence, and no claim generalizes one
-data point into a tool comparison.
+The end-to-end demo of Drift Lab: from findings to a verified fix. Everything
+in this script is verified against a pushed commit, a recorded CI run, or a
+documented decision; nothing below describes fixture replay as live evidence,
+and no claim generalizes one data point into a tool comparison.
 
-Run it against the public repository (GosYao/drift-lab) with PR #1 open.
+Run it against the public repository (GosYao/drift-lab) with the seeded pull
+requests open: PR #1 (support-role read broadening, labelled seeded, never to
+merge), PR #2 (the vulnerable YAML import, labelled seeded, never to merge or
+deploy), and the fix pull request for PR #2's findings.
 
-## Opening (30 seconds)
+## Opening (60 seconds)
 
-Show PR #1: one red check, the rest green, and an AI review comment citing the
-exact failing assertion.
+Show PR #2, "Load scenarios from YAML", with two red checks: Semgrep (unsafe
+YAML deserialization in the new import endpoint) and Trivy (a critical CVE in
+the pinned PyYAML). Next tab: PR #1, red on the capability-intent policy test
+for broadening the support agent's read scope.
 
-> This is a live AWS lab. A vendor scanner found nothing wrong with this
-> change. Our own policy-as-code gate failed it deterministically. And the
-> agent, in under a minute, with zero cloud credentials, told us what it
-> means, whether it was drift or intent, and how to fix it with proof.
+> Two pull requests, two scanners, one attack path. Each scanner found its own
+> finding. Neither check sees the other pull request, so nothing tells you
+> that together they are a way from this service to the customer archive.
+> What happens after the finding is your problem, so that is the demo.
 
 ## Part 1 — Background and the three Whys
 
@@ -30,10 +35,11 @@ exact failing assertion.
   (`resource_version`/`generation` churn, null-vs-empty, update-without-diff,
   IAM inline-policy mirror collapse) so findings show changed attributes, not
   raw plan JSON.
-- The PR pipeline is real and verified: `make check` (75 tests plus contracts),
-  capability-intent Terraform tests with mock providers, Semgrep and Trivy
-  from digest-pinned images, and a credential-separated Droid review arm
-  (0.7.0 through 0.7.2).
+- The PR pipeline runs the full loop: `make check` (unit tests plus
+  contracts), capability-intent Terraform tests with mock providers, Semgrep
+  and Trivy from digest-pinned images through one shared definition
+  (`scripts/scanners.py`), a verify-fix job for `fix/` branches, and a
+  credential-separated Droid review that posts one packet per finding.
 
 ### Why 1 — Why does drift keep happening even though we write IaC?
 
@@ -50,68 +56,85 @@ hardening, and namespace isolation.
 Two reasons, both demonstrated here. First, generic compliance packs check
 against industry rules, not your intent: the seeded support-role broadening
 (support-agent silently gaining read on customer-archive) passed the external
-Lacework IAC and SCA checks on the same PR where the intent-encoded gate
-failed it. One seeded case, recorded factually. Second, noise: raw plan output
-buries the two lines that matter under version fields and mirror updates.
-Triage cost is set by noise, and noise is a deterministic problem.
+IAC and SCA checks on the same PR where the intent-encoded gate failed it. One
+seeded case, recorded factually. Second, noise: raw plan output buries the two
+lines that matter under version fields and mirror updates. Triage cost is set
+by noise, and noise is a deterministic problem.
 
 ### Why 3 — Why does an agent change the economics instead of just adding cost?
 
 The expensive part was never detection; it is the human loop: connect finding,
-change, intent, fix, proof. The demo's division of labor answers the objection:
-deterministic checks make the trust decision, and the agent does the
-correlation and explanation. The agent cannot override a gate, cannot
-fabricate evidence, and in this pipeline holds no credential that can touch
-anything. The trust model stays deterministic; the labor cost collapses.
+change, intent, fix, proof. The demo's division of labor answers the
+objection: deterministic checks make the trust decision, and the agent does
+the correlation and explanation. The agent cannot override a gate, cannot
+fabricate evidence, cannot add a suppression, and in this pipeline holds no
+credential that can touch anything. The trust model stays deterministic; the
+labor cost collapses.
 
-## Part 2 — Why Droid makes the difference (walkthrough)
+## Part 2 — The loop, step by step
 
-Timings are from the recorded CI run on PR #1.
+1. **Triage with evidence (3 min).** `scripts/triage.py` computes the evidence
+   first: the scanner findings, the gate outcomes, the chained exposure, and
+   the diff. The triage model — one `model:` line in the reviewed file
+   `.factory/droids/triage.md` — runs read-only and writes one packet per
+   finding: recommendation (true positive, false positive, accepted risk),
+   class, reachability with `file:line` evidence, chained exposure, and what
+   else the change touches. The posted review carries the model's packets
+   above the computed evidence, so a packet can recommend but never change
+   what a gate said. If the model fails, times out, or returns an unusable
+   answer, the review says "Triage unavailable, human review required." and
+   every finding keeps the severity its gate reported. Talking point: the
+   reviewer starts from a recommendation with evidence, not from a raw
+   finding.
 
-1. **The gate goes red on intent (2 min).** Open PR #1 checks: `policy-test`
-   fails on exactly `support-agent must read only the customer-orders table`
-   (4 runs pass, 1 fails). `make check`, Semgrep, Trivy: green. Optionally
-   contrast the external Lacework IAC/SCA checks, green on the same
-   broadening. Talking point: everything a commodity scanner can see is fine
-   here; the only thing that caught it is encoded intent, because the intent
-   is ours.
+2. **Chained exposure, computed (1 min).** The packet's exposure line is not
+   the model's guess: `scripts/chained_exposure.py` reads the Terraform
+   source, works out which service account the changed workload runs as, which
+   IAM role Pod Identity binds to it, what that role's policy can read, and
+   which other branches on the remote change the same policy or the same
+   workload's code. That is the line that connects PR #2's endpoint to PR #1's
+   broadening. A construct the script does not model is reported as unknown
+   and sent to a person; a model may word the line, never invent the edge.
 
-2. **The agent's review, already posted (3 min).** Open the Droid review
-   comment. Point at each behavior:
-   - cites the deterministic gate by name, run, exact assertion condition and
-     text — it explains the verdict, it does not issue one;
-   - classifies the finding: a proposed intent change, not out-of-band drift
-     and not noise, adding the load-bearing sentence — an approved expansion
-     would require updating the capability baseline, and this seed does not;
-   - refuses to overclaim: states the evidence is mock-provider verification,
-     not live AWS access;
-   - ends with `VERDICT: request changes` and a verified fix path: restore the
-     conditional, re-run `make policy-test`, all five runs pass without
-     weakening an assertion.
+3. **Fix with proof (4 min).** On a branch named `fix/...`, when the agent
+   tries to finish, the Stop hook (`.factory/hooks.json`) runs
+   `scripts/verify_fix.py` against the base: no new suppression (a `nosemgrep`
+   comment, an ignore-file entry, a weaker command, a removed or weakened
+   test), a regression test that fails on the base and passes now, the full
+   unit suite against the pinned dependencies, the capability-intent policy
+   test when `infra/` changed, and both pinned scanners clean. A failing gate
+   blocks the stop and the reason becomes the agent's next instruction; after
+   three blocks the hook gives up and the fix stays NOT VERIFIED. Show the
+   refusal once: the same finding "fixed" with a `nosemgrep` comment fails the
+   first gate and names the suppression. A pin bump alone would turn the
+   dependency scanner green and leave the unsafe call in place; a suppression
+   would turn the code scanner green and fix nothing. The fix is not done
+   because the model says so; it is done because the scanner and the test say
+   so.
 
-3. **The self-application moment (1 min).** CI Semgrep caught the `curl | sh`
-   install pattern in the workflow itself — the one file local pre-verification
-   could not cover, because it did not exist yet (0.7.1). The scanner caught
-   the agent pipeline; agent-plus-human triaged it: accepted inline with
-   rationale at the source line, recorded in the WORKLOG. Scanner finds, human
-   decides, agent documents — working on itself.
+4. **The fix pull request (2 min).** The pipeline's verify-fix job runs the
+   same gates in CI, using the verifier and scanner definitions from the base
+   revision, so the fix cannot change the checks that judge it. Its evidence
+   (gate results before and after) is uploaded as an artifact and folded into
+   the review packet the droid-review job posts. Green checks plus a packet:
+   the scanner output before and after, the regression test, the
+   no-suppression result, the chained-exposure line, and the model that wrote
+   it.
 
-4. **The trust architecture (1 min).** The answer to "isn't an agent in CI
+5. **The trust architecture (1 min).** The answer to "isn't an agent in CI
    dangerous?":
    - the review job holds only `FACTORY_API_KEY`, no GitHub token, and runs
-     `droid exec` read-only by default;
+     `droid exec` read-only;
    - a separate job holding only `GITHUB_TOKEN` (pull-requests: write) posts
      the review;
    - no job can both decide and publish; the availability gate exposes a
      boolean, never the key value;
+   - the model for each job is a line in a reviewed file, not a per-user
+     setting;
    - CI never plans or applies against AWS; actions pinned by SHA, scanner
-     images by digest, every commit GPG-signed.
-
-5. **The local UI (optional, 30 sec).** `make preview`, then
-   http://127.0.0.1:8765 — the GitHub-view preview and scenario reports. Be
-   explicit with the audience: this panel replays synthetic fixtures; live
-   collection today is the CLI (`python -m drift_lab collect`), and wiring it
-   into the UI is next. Honest boundaries read as strength.
+     images by digest, every commit GPG-signed;
+   - the merge control is branch protection plus a human approver, not the
+     agent.
 
 ## Part 3 — Technical and business benefit analysis
 
@@ -119,45 +142,52 @@ Timings are from the recorded CI run on PR #1.
 | --- | --- | --- |
 | Noise engineering | Sanitizer v2 filters: changed-attribute paths, version churn, IAM mirror collapse | Triage reads meaningful lines, not raw plan JSON; triage cost engineered down deterministically |
 | Intent as code | 5 capability tests, mock providers, credential-free; seeded broadening fails them | Every PR checks intent pre-merge at near-zero marginal cost; no AWS credentials in PR checks |
-| Detection vs explanation | Gates decide; agent cites, classifies, gives fix path and verdict | Senior-reviewer-quality triage in 57s, auditable, non-fabricating |
+| Detection vs explanation | Gates decide; the triage model recommends one packet per finding over computed evidence | Reviewer starts from a recommendation with evidence; the model never changes a check result |
+| Fail-safe triage | Model failure renders "triage unavailable, human review required"; severities unchanged | The agent can add labor savings but can never silently lower the bar |
+| Fix with proof | Verifier gates: no suppression, regression test fails-before/passes-after, scanners clean, locally and in CI | "Fixed" becomes a reproducible state with evidence, not a claim in a comment |
 | Cross-tool delta | External IAC/SCA checks passed the seeded broadening; the lab's own gate failed it | Your intent is a differentiator no vendor product carries (one seeded case, not a generalization) |
 | Supply chain | Pinned actions and digests, signed commits, read-only collector, sanitized snapshots | No account IDs or raw state leave the repo; findings shareable without redaction work |
 | Credential separation | Factory key and GitHub token never co-located; review job read-only | The agent adds capability without adding blast radius; the auditable answer to agent risk |
-| Cost control | Lab at $5-7/day under a $500 budget alert; agent arm no-ops without the key | Agent spend is a gate, not a leak; the whole lab costs less than one incident triage hour |
+| Cost control | Lab at $5-7/day under a $500 budget alert; agent arm no-ops without the key; the packet records the model and credits used | Agent spend is visible per run; the whole lab costs less than one incident triage hour |
 
 The metric this prototype is built around: **cost per verified fix**. A fix
-counts as verified only when it passes deterministic re-verification — the
-agent's own review states the criterion. The recorded run gives the
-numerator's ingredients: 57 seconds of agent review, seconds of pinned
-scanners, zero cloud credentials. The benchmark phase measures it properly
-across arms (scanners-only, plus ordinary Droid review, plus policy-as-code
-plus Droid), so the claim becomes a number instead of an anecdote. That phase
-is designed, not yet measured.
+counts as verified only when the deterministic gates pass: the scanner that
+reported the finding reports nothing, a regression test fails before and
+passes after, no new suppression, and a person approves the merge. The review
+packet records the ingredients, including the model and the Factory credits
+the run used, so the numerator becomes a number instead of an anecdote.
 
 ## Honest boundaries to state on stage
 
-- One seeded case; no generalization beyond it, no competitor-parity claims.
+- One seeded pair of pull requests; no generalization beyond it, no
+  competitor-parity claims.
 - The UI is fixture replay; live collection is the CLI for now.
-- The benchmark arms are designed, not yet measured.
+- The verifier re-runs the scanners and tests; it does not reproduce an
+  exploit, and the demo does not claim it does.
+- The chained-exposure script models the lab's own Terraform constructs only
+  and answers "unknown" on anything else; it reads source, not live AWS
+  permissions.
 - No automatic reconciliation: drift is detected and explained; remediation
   stays authorized human work.
 
 ## Closing line
 
-> Detection is solved — we proved it by making our own gate catch what the
-> vendor scanners passed. What is not solved is turning findings into
-> decisions, and decisions into verified fixes. That is the 57 seconds you
-> just saw — and it is why the next phase measures cost per verified fix.
+> Detection is solved; we proved it by making our own gate catch what the
+> vendor checks passed. What is not solved is turning findings into decisions,
+> and decisions into verified fixes. That loop — one packet per finding, a
+> proof for the fix, and a person's approval on the record — is what you just
+> saw.
 
 ## Appendix — quick references
 
-- PR #1 (seeded broadening, live demo): https://github.com/GosYao/drift-lab/pull/1
-- Workflow: `.github/workflows/pull-request.yml`; review prompt:
-  `.github/droid-review-prompt.md`
+- Seeded PR #1 (policy broadening): https://github.com/GosYao/drift-lab/pull/1
+- Workflow: `.github/workflows/pull-request.yml`; triage droid:
+  `.factory/droids/triage.md`; Stop hook: `.factory/hooks.json`
+- Scripts: `scripts/scanners.py` (one pinned scanner definition),
+  `scripts/triage.py` (evidence + packets + fail-safe),
+  `scripts/chained_exposure.py`, `scripts/verify_fix.py` (the fix gates)
 - Policy gate: `infra/workloads/policy.tftest.hcl` via `make policy-test`
 - Inline acceptances to show: `infra/workloads/main.tf` (KMS on synthetic
   tables), `.github/workflows/pull-request.yml` (CLI install pattern)
-- Records: `docs/WORKLOG.md` (0.7.0-0.7.2), `docs/CHANGELOG.md`,
+- Records: `docs/WORKLOG.md` (0.7.0-0.7.2, 0.8.0), `docs/CHANGELOG.md`,
   `docs/STATUS.md`, `docs/RUNBOOK.md` (CI section)
-- Commits: c0fea7f (workflow), 2362d1f (CI catch acceptance), 7bf7c31
-  (Droid arm verification)

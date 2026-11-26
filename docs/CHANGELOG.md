@@ -3,6 +3,60 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.8.0 — 2026-11-26
+
+### Added
+
+- The findings-to-verified-fix loop:
+  - `scripts/scanners.py`: one pinned definition of both scanners (Semgrep
+    OWASP Top 10, Trivy vuln + secret, digest-pinned images) with normalized
+    JSON findings, used by the pipeline, the verifier, and `make scan`. A
+    scanner that cannot run is an error, never a clean result.
+  - `scripts/verify_fix.py`: the gates a security fix must pass — no new
+    suppression and no change to the checks that judge the fix, a regression
+    test that fails on the base and passes now, the unit suite against the
+    pinned dependencies, the capability-intent policy test when `infra/`
+    changed, and both pinned scanners (optionally against the base for the
+    before/after record). `make verify-fix`.
+  - `.factory/hooks.json`: a Stop hook that runs the verifier when a session
+    on a `fix/` branch stops with unverified changes, blocks with the gate
+    output as the reason (three attempts), then gives up marked NOT VERIFIED.
+  - `scripts/chained_exposure.py`: computes from Terraform source and git
+    which identity a changed workload runs as, what that identity can read,
+    and which other branches change the same policy or the same workload's
+    code. A construct it cannot model is "unknown", never guessed.
+  - `scripts/triage.py` and `.factory/droids/triage.md`: computes the review
+    evidence (findings, gate outcomes, chained exposure, diff), runs the
+    triage model named in the droid file read-only over it, and composes one
+    review packet per finding with the computed evidence attached. Fail-safe:
+    an unusable model result becomes "Triage unavailable, human review
+    required." and every finding keeps the severity its gate reported.
+    `make triage`.
+  - `.factory/droids/fix.md`: the fix droid (named frontier model): never
+    suppress, add a regression test, and run `make verify-fix` before done.
+- Pipeline: the scanner jobs upload normalized findings even on failure; a
+  `verify-fix` job for `fix/` branches runs the verifier taken from the
+  base revision, so a fix cannot change the checks that judge it; the review
+  job builds packets with `scripts/triage.py` and posts them through the
+  unchanged two-job credential split. The static review prompt
+  (`.github/droid-review-prompt.md`) is replaced by the droid file plus
+  computed evidence.
+- AGENTS.md: two security-fix rules (no suppressions; a regression test and a
+  VERIFIED verifier run before a fix is called done).
+- `make install` and `make demo-reset`; the test interpreter is the
+  project `.venv` whenever a branch has one.
+- 64 new unit tests (139 total): scanner parsing and fail-closed
+  classification, suppression and regression gates, the Stop hook's block
+  cap, chained-exposure parsing and branch reasoning, packet composition and
+  the fail-safe.
+
+### Changed
+
+- README, RUNBOOK, DEMO and STATUS describe the new loop. The external
+  scanner's name is scrubbed from DEMO.md, WORKLOG.md and
+  artifacts/demo-interactive.html (current files, not git history), and the
+  optional UI step is removed from DEMO.md.
+
 ## 0.7.5 — 2026-11-15
 
 ### Added
