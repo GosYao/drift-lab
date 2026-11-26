@@ -141,8 +141,9 @@ labor cost collapses.
      setting;
    - CI never plans or applies against AWS; actions pinned by SHA, scanner
      images by digest, every commit GPG-signed;
-   - the merge control is branch protection plus a human approver, not the
-     agent.
+   - the merge control is GitHub's: rulesets on `main` and `feature/**`
+     require the checks and a code-owner approval from an account that is not
+     the author, with no bypass; Factory does not enforce it.
 
 ## Part 3 — Technical and business benefit analysis
 

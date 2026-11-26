@@ -62,4 +62,15 @@ if 'git archive "origin/$DEFAULT_BRANCH"' not in workflow:
     raise SystemExit("The verify-fix job must take the verifier and the scanner "
                      "definition from the default branch.")
 
+# The judge, the rules and the tests are reviewed by someone other than the
+# author: each needs a code owner.
+owners_file = ROOT / ".github/CODEOWNERS"
+owners = owners_file.read_text() if owners_file.is_file() else ""
+owned = {line.split()[0] for line in owners.splitlines()
+         if line.strip() and not line.startswith("#") and len(line.split()) > 1}
+missing = [path for path in ("/AGENTS.md", "/.factory/", "/.github/", "/scripts/", "/tests/")
+           if path not in owned]
+if missing:
+    raise SystemExit("CODEOWNERS must name an owner for: " + ", ".join(missing))
+
 print("Repository contracts and static DOM references: passed.")

@@ -3,6 +3,15 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.8.2 — 2026-11-26
+
+### Added
+
+- `.github/CODEOWNERS`: the rules, droids, judge scripts, workflow, tests,
+  infrastructure and dependency pins are owned by a reviewer account that is
+  not the author. `scripts/check_repository.py` fails if the judge, the
+  rules or the tests lose their owner.
+
 ## 0.8.1 — 2026-11-26
 
 ### Added

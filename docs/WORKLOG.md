@@ -2,6 +2,28 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-11-26 — Code owners and the push (0.8.2)
+
+### Done
+
+- Added `.github/CODEOWNERS` naming `garymax-cloud`, the second collaborator
+  account, for `AGENTS.md`, `Makefile`, `.factory/`, `.github/`, `scripts/`,
+  `tests/`, `infra/` and `requirements.txt`. A repository contract keeps the
+  judge, the rules and the tests owned.
+
+### Decisions
+
+- With the user's authorization: push `main`, the seeded branch (PR #2) and
+  the stacked fix branch, merge `main` into PR #1's branch, then turn on
+  rulesets for `main` and `feature/**`: changes by pull request only, the
+  deterministic checks required, a code-owner approval required, no force
+  push or deletion, and no bypass, the repository admin included. The user
+  chose no bypass so that "GitHub enforces the approval" is true for the
+  author too. Later changes to `main` go through a pull request approved by
+  the second account.
+- The prepared `nosemgrep` branch stays local. It is the deterministic
+  negative example, and it is not a pull request.
+
 ## 2026-11-26 — The verifier asked too little of the regression test (0.8.1)
 
 ### What went wrong
