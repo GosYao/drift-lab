@@ -2,6 +2,31 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-11-26 — First hosted run of the loop; the packet was not posted on red PRs (0.8.4)
+
+### What went wrong
+
+- On the first hosted run, PR #1 and PR #2 built their review packets but
+  did not post them. `post-review` had no `if:`, so the default `success()`
+  condition saw the failed gates upstream of `droid-review` and skipped the
+  job. Those are exactly the pull requests the packet exists to explain. PR
+  #3, with every gate green, posted normally.
+
+### Done
+
+- `post-review` runs when the review succeeded, whatever the gates said
+  (`always() && needs.droid-review.result == 'success'`). A repository
+  contract keeps the condition; it was checked both ways.
+- Hosted results before the fix (run on the merge refs of `cc445de`): PR #2
+  (`87ebf1f`) red on Semgrep and Trivy, as seeded; PR #1 (merge of `main`,
+  `b4d1fc8`) red on `terraform-check + policy-test`; PR #3 (the stacked fix,
+  `82988f1`, into PR #2's branch) green, `verify-fix` VERIFIED in 1m9s with
+  both base findings and the failed marker assertion recorded, and the packet
+  posted by glm-5.3-flash (12 s, 651 credits, VERDICT: no issues found).
+  PyYAML 5.3.1 installed on the hosted Python 3.12 runner.
+- Version note: 0.8.3 is the fix on `fix/yaml-safe-load`, which never merges
+  into `main`, so `main` goes from 0.8.2 to 0.8.4.
+
 ## 2026-11-26 — Code owners and the push (0.8.2)
 
 ### Done
