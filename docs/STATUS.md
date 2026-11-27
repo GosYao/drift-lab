@@ -46,7 +46,7 @@ Phase 1 is **not complete** against its exit criteria. Not yet done:
 
 ## Phase 0 — local prototype (complete)
 
-- 150 unit tests pass (`make test`); `make check` and `make terraform-check` pass.
+- 157 unit tests pass (`make test`); `make check` and `make terraform-check` pass.
 - `make policy-test` (capability-intent Terraform tests, mock providers, no
   credentials) passes on the approved revision and fails on a seeded IAM
   broadening.

@@ -2,6 +2,30 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-11-26 — Unsafe YAML import fixed on the seeded branch (0.8.3)
+
+### What went wrong
+
+- The fix run wrote its changelog lines into the 0.8.1 entry, which records
+  an earlier change on `main`. Review moved them to a 0.8.3 entry before the
+  commit. The code, the test and the notes under Done are as the run wrote
+  them.
+
+### Done
+
+- Fixed the scenario import endpoint with `yaml.safe_load` and moved the
+  pinned PyYAML dependency from 5.3.1 to 6.0.4, outside the vulnerable range
+  for CVE-2020-14343.
+- Added the regression test required by the fix rule. It sends a
+  `!!python/object/apply` payload through `/api/scenarios/import` and asserts
+  that the harmless marker file is not created. Before the fix, that assertion
+  fails because the unsafe loader opens the marker file; after the fix it
+  passes with a 400 response.
+- Validation: `make test` and `make check` both pass with 157 tests; `make
+  verify-fix` reports VERIFIED with no Semgrep or Trivy findings, and records
+  the regression failure on the base (`AssertionError: True is not false :
+  unsafe YAML load created the marker file`) and a pass on this tree.
+
 ## 2026-11-26 — Code owners and the push (0.8.2)
 
 ### Done
