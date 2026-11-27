@@ -26,6 +26,24 @@ Running record of what was done, decided, and deliberately not done. Newest firs
   PyYAML 5.3.1 installed on the hosted Python 3.12 runner.
 - Version note: 0.8.3 is the fix on `fix/yaml-safe-load`, which never merges
   into `main`, so `main` goes from 0.8.2 to 0.8.4.
+- After the push, closing and reopening PR #1 and PR #2 reran them, but the
+  first rerun checked out the previous merge commit (main at `cc445de`, the
+  checkout log shows it), so the old workflow skipped the post again. A
+  second reopen of PR #2 used the recomputed merge ref and posted its packet:
+  glm-5.3-flash, 10 s, 1,319 credits, true positive on both findings, the
+  advisory's `FullLoader` path called out as not the one this code uses, the
+  PR #1 chain named, VERDICT: request changes. PR #1's merge ref was not
+  recomputed, so `main` was merged into its branch again (`326eac5`); its
+  packet posted (697 credits, VERDICT: request changes, PR #2 and PR #3
+  named in the chain). Lesson: confirm the checked-out merge commit, not only
+  the green or red result.
+- The repository also has an external scanner app installed. Its checks and
+  comments appear on these pull requests; they are not part of this loop.
+
+### Not done
+
+- Rulesets come next, in the order recorded under 0.8.2. After them, a
+  change to `main` needs a pull request approved by the code owner.
 
 ## 2026-11-26 — Code owners and the push (0.8.2)
 

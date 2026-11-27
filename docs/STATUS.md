@@ -68,10 +68,13 @@ Phase 1 is **not complete** against its exit criteria. Not yet done:
   evidence (scanner findings, gate outcomes, chained exposure, diff) with a
   fail-safe that keeps the scanner's severity. The workflow runs on pull
   requests into any branch, so a fix targets the branch that has the finding
-  and is compared with the vulnerable code. The earlier review arm was
-  verified live on seeded PR #1 (0.7.2). The new loop is verified locally
-  only: the seeded branch for PR #2 and its fix branch exist and are not yet
-  pushed. The GitHub panel in the UI remains a fixture preview.
+  and is compared with the vulnerable code. The loop is verified on
+  GitHub: PR #2 (seeded) is red on Semgrep and Trivy, PR #1 is red on the
+  policy test, PR #3 (the fix, into PR #2's branch) is green with
+  `verify-fix` VERIFIED, and each has its review packet posted (0.8.4).
+  Rulesets on `main` and `feature/**` require the checks and a code-owner
+  approval, with no bypass. The GitHub panel in the UI remains a fixture
+  preview.
 - **Real agent egress is blocked by design.** Pod Identity credentials, DNS, and
   DynamoDB need a reviewed egress allow-list before a real agent replaces the
   fixture viewer.
