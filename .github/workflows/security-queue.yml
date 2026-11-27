@@ -1,0 +1,101 @@
+# Manual fallback for the demo security queue (the paused Factory Automation
+# on the operator's Mac is the primary trigger).
+#
+# Two jobs with separated credentials:
+#   - rank: holds only FACTORY_API_KEY and a read-only checkout. It runs the
+#     pinned scanners, the policy test on other branches and the queue droid
+#     (read-only), then uploads queue.json. It cannot write to GitHub.
+#   - publish: holds only GITHUB_TOKEN with issues: write. It runs no model
+#     and no scanner; it validates queue.json and creates or updates issues.
+#     It never closes, reopens, approves or merges anything.
+#
+# The queue code lives on demo/triage-queue, which is the seeded demo tree.
+# The ref is fixed here, not an input, so a dispatch cannot choose other code
+# to run next to the Factory key. Do not run this and the Mac Automation at
+# the same time: the shared concurrency group covers only this workflow.
+name: security-queue
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: security-queue
+  cancel-in-progress: false
+
+jobs:
+  rank:
+    name: rank the queue (read-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      sha: ${{ steps.head.outputs.sha }}
+    env:
+      FACTORY_API_KEY: ${{ secrets.FACTORY_API_KEY }}
+      FACTORY_DROID_AUTO_UPDATE_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: demo/triage-queue
+          persist-credentials: false
+          fetch-depth: 0
+      - id: head
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.13.5
+          terraform_wrapper: false
+      - name: Fetch branch refs for the policy test on other branches
+        # Public repository: no credentials needed.
+        run: git fetch --no-tags origin '+refs/heads/*:refs/remotes/origin/*'
+      - name: Install the pinned Droid CLI
+        run: |
+          npm install -g --include=optional --ignore-scripts --no-audit --no-fund \
+            @factory/cli@1.21.1
+          test "$(droid --version)" = "1.21.1"
+      - name: Rank
+        run: |
+          test -n "$FACTORY_API_KEY"
+          python3 scripts/triage_queue.py --out "$RUNNER_TEMP/queue.md"
+          test -s "$RUNNER_TEMP/queue.json"
+          cat "$RUNNER_TEMP/queue.md" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: security-queue
+          path: |
+            ${{ runner.temp }}/queue.json
+            ${{ runner.temp }}/queue.md
+          if-no-files-found: error
+
+  publish:
+    name: publish issues
+    needs: rank
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.rank.outputs.sha }}
+          persist-credentials: false
+          sparse-checkout: scripts/queue_issues.py
+          sparse-checkout-cone-mode: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: security-queue
+          path: queue
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/queue_issues.py --queue queue/queue.json \
+            --ledger "$RUNNER_TEMP/ledger.json" --publish | tee "$RUNNER_TEMP/published.json"
+          { echo '```json'; cat "$RUNNER_TEMP/published.json"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
