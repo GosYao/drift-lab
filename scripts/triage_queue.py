@@ -18,6 +18,7 @@ reported it in, marked unranked.
 
 import argparse
 import concurrent.futures
+import hashlib
 import json
 import os
 import re
@@ -290,21 +291,54 @@ def cell(text):
     return str(text).replace("|", "\\|").replace("\n", " ")
 
 
-def compose(evidence, run):
-    """The queue a person reads: the ranking beside the source's severity, then the facts."""
+def queue_order(evidence, run):
+    """One interpretation of the model answer for both output formats."""
     findings = evidence["findings"]
-    order = ranking(run["text"], len(findings)) if run["ok"] and findings else None
+    order = ranking(run["text"], len(findings)) if run["ok"] and findings else []
     problem = run["error"] if not run["ok"] else ("" if order or not findings else
                                                   "the model's text is not a full ranking")
     if problem:
         run = dict(run, ok=False, error=problem)
+        order = [(number, "unranked", UNRANKED) for number in range(1, len(findings) + 1)]
+    return order, problem, run
+
+
+def finding_id(finding):
+    """Stable across rank, commit, line and installed-version changes."""
+    location = re.sub(r":\d+(?= on |$)", "", finding["location"])
+    location = re.sub(r" \([^)]*\)$", "", location)
+    identity = [finding["scanner"], finding["rule"], location]
+    return hashlib.sha256(json.dumps(identity).encode()).hexdigest()
+
+
+def structured_queue(evidence, run):
+    order, problem, run = queue_order(evidence, run)
+    rows = []
+    for rank, (number, urgency, reason) in enumerate(order, 1):
+        finding = evidence["findings"][number - 1]
+        rows.append(dict(
+            {key: finding[key] for key in ("scanner", "rule", "severity", "location")},
+            id=finding_id(finding), title=finding.get("title") or finding["rule"],
+            facts=list(finding.get("facts", [])), rank=None if problem else rank,
+            urgency=urgency, reason=reason))
+    return {"schema": 1, "branch": evidence["branch"], "head": evidence["head"],
+            "dirty": evidence["dirty"], "ranked": not bool(problem),
+            "model": triage.model_line(run, DROID_FILE),
+            "sources": [triage.scanner_summary(result) for result in evidence["results"]]
+                       + [triage.gate_summary(gate) for gate in evidence["gates"]],
+            "exposure": evidence["exposure"]["facts"], "findings": rows}
+
+
+def compose(evidence, run):
+    """The queue a person reads: the ranking beside the source's severity, then the facts."""
+    findings = evidence["findings"]
+    order, problem, run = queue_order(evidence, run)
     lines = ["## Triage queue: " + subject(evidence), "",
              "A model's ranking of the computed evidence below. It recommends an order. It "
              "cannot change a severity or close a finding; a person decides.", ""]
     if problem:
         lines += ["**{}** ({}.) The queue is in the order the sources reported it.".format(
             UNRANKED, problem[0].upper() + problem[1:]), ""]
-        order = [(number, "unranked", UNRANKED) for number in range(1, len(findings) + 1)]
     lines += ["| Rank | Finding | Severity from the source | Urgency | Why |",
               "| --- | --- | --- | --- | --- |"]
     for rank, (number, urgency, reason) in enumerate(order, 1):
@@ -329,6 +363,10 @@ def compose(evidence, run):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", type=Path, default=ROOT / triage.WORK_DIR / "queue.md")
+    parser.add_argument("--json-out", type=Path,
+                        help="structured output (default: beside --out, with .json suffix)")
+    parser.add_argument("--root", type=Path, default=ROOT,
+                        help="source tree to inspect; instructions still come from this script's tree")
     parser.add_argument("--model", default=os.environ.get("TRIAGE_MODEL"),
                         help="use this model instead of the one the droid file names")
     parser.add_argument("--evidence-only", action="store_true",
@@ -343,7 +381,8 @@ def main(argv=None):
     model = args.model or meta.get("model") or "unspecified"
     say("triage-queue: computing the evidence (scanners, policy tests on open branches, "
         "recorded observations)")
-    evidence = gather(ROOT)
+    source_root = args.root.resolve()
+    evidence = gather(source_root)
     say("triage-queue: {} findings on {}".format(len(evidence["findings"]),
                                                  subject(evidence).replace("`", "")))
     work = ROOT / triage.WORK_DIR
@@ -353,14 +392,19 @@ def main(argv=None):
     if args.evidence_only:
         say("triage-queue: wrote {}".format(prompt))
         return 0
-    run = triage.run_droid(prompt, model, meta.get("reasoningEffort"), ROOT, args.timeout, say)
+    run = triage.run_droid(prompt, model, meta.get("reasoningEffort"), source_root,
+                           args.timeout, say)
     if args.model and args.model != meta.get("model"):
         run["overrides"] = meta.get("model")
     queue, _ = compose(evidence, run)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(queue)
+    json_out = args.json_out or args.out.with_suffix(".json")
+    json_out.parent.mkdir(parents=True, exist_ok=True)
+    json_out.write_text(json.dumps(structured_queue(evidence, run), indent=2) + "\n")
     print(queue)
     say("triage-queue: wrote {}".format(args.out))
+    say("triage-queue: wrote {}".format(json_out))
     return 0
 
 

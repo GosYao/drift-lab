@@ -3,6 +3,23 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.8.7 — 2026-11-27 (demo queue integration)
+
+### Added
+
+- Structured `queue.json` beside the ranked Markdown, with unchanged source
+  severity, computed facts, source summaries and model provenance.
+- `make queue-issues`: an explicit, idempotent publisher to `GosYao/drift-lab`,
+  with stable issue markers and urgency labels. It preserves unrelated labels
+  and comments and never closes or reopens issues. Preview is the script default.
+- 13 publisher/output tests (182 total) covering reruns, partial publishing,
+  closed and missing findings, duplicate markers and unusable model output.
+- `docs/QUEUE.md` records entry points and the demo integration's boundaries.
+
+### Fixed
+
+- An empty queue now composes successfully in both output formats.
+
 ## 0.8.6 — 2026-11-26 (demo/triage-queue only)
 
 ### Added

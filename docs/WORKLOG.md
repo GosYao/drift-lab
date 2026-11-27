@@ -2,6 +2,25 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-11-27 — Queue to issues (0.8.7)
+
+- User authorized publishing ranked findings as issues, linking the existing
+  fix, a paused Factory Automation on the Mac, and a workflow_dispatch fallback
+  through a reviewed PR. No approvals, merges or AWS operations are included.
+- Added structured output and a separate issue publisher. The queue contains
+  normalized finding fields and summaries, not raw scanner or Terraform output.
+  Stable identity ignores rank, commit, line and installed version, but retains
+  file and policy branch. No source severity changes.
+- `make check`: 182 tests pass, compilation and repository contracts pass.
+  Live publishing and Automation validation are still pending at this entry.
+- First integration ranking had the intended order but said a PyYAML upgrade
+  fixes neither the advisory path nor the code finding. The first half is wrong:
+  the upgrade clears the dependency advisory; it does not replace the unsafe
+  API. Nothing was published. Instructions now distinguish those facts and ask
+  for the finding's own location, not its importer's location.
+- `demo/triage-queue` is pushed and trusted (the earlier 0.8.6 “local only” and
+  “not trusted” notes describe the state before that later step).
+
 ## 2026-11-26 — A ranked triage queue on a demo branch (0.8.6)
 
 ### Done

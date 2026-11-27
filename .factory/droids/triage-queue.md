@@ -31,6 +31,10 @@ Rank by what an attacker could do with each finding here, highest first:
 For a dependency, rule 4 turns on whether this code calls the function the
 advisory names, not on whether the package is used. Upgrading a package never
 fixes a code finding that names an unsafe API itself.
+An upgrade to the fixed version does clear that dependency advisory, even
+when its affected function is not called here. Keep these two facts separate.
+Do not claim an upgrade cannot fix its dependency CVE. For the unsafe YAML
+call, cite the finding's location, not the importing server's location.
 
 Weigh the facts, not the rule names. If the evidence does not settle where a
 finding belongs, rank it higher, not lower, and say what a person must check.
