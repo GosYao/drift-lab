@@ -36,6 +36,11 @@ import triage  # noqa: E402
 problems = triage.droid_contract(ROOT / ".factory/droids/triage.md")
 if problems:
     raise SystemExit("Triage droid contract failed: " + "; ".join(problems))
+import triage_queue  # noqa: E402
+
+problems = triage_queue.droid_contract(ROOT / triage_queue.DROID_FILE)
+if problems:
+    raise SystemExit("Triage queue droid contract failed: " + "; ".join(problems))
 fix_meta, _ = triage.load_droid(ROOT / ".factory/droids/fix.md")
 if fix_meta.get("model", "inherit") == "inherit":
     raise SystemExit("The fix droid must name its model, not inherit one.")

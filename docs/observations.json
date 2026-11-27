@@ -1,0 +1,18 @@
+{
+  "about": "Findings observed on the live lab and recorded in the docs. scripts/triage_queue.py reads them as recorded evidence; it does not collect them again.",
+  "observations": [
+    {
+      "id": "kubelet-reachable-from-pod",
+      "title": "The pod reaches the node kubelet on :10250 despite default-deny egress",
+      "location": "infra/workloads NetworkPolicy; node kubelet :10250",
+      "severity": "not rated",
+      "recorded": "2026-10-30",
+      "source": "docs/STATUS.md open finding 1; docs/WORKLOG.md, live deployment findings",
+      "facts": [
+        "Observed on the live lab: default-deny egress does not block pod to local node traffic; the kubelet port 10250 is reachable from the pod.",
+        "Stated in docs/STATUS.md, not recorded as a separate probe result: the kubelet requires authentication.",
+        "Stated in docs/STATUS.md: restrict this before running untrusted workloads."
+      ]
+    }
+  ]
+}

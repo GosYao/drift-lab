@@ -2,6 +2,52 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-11-26 — A ranked triage queue on a demo branch (0.8.6)
+
+### Done
+
+- Branch `demo/triage-queue`, cut from the seeded `feature/scenarios-from-yaml`
+  (`87ebf1f`), local only. Main is unchanged and no image was rebuilt. The
+  `demo/` prefix is outside the `feature/**` ruleset; nothing was weakened.
+- The queue reuses PR #2's code flaw, so fix PR #3 stays step 2a. It adds one
+  seeded dependency, `pyarrow==14.0.0` in `tools/dev/requirements.txt`
+  (CVE-2023-47248, critical, fixed in 14.0.1), never copied into the image.
+- Scanner probes in the pinned Trivy image, before committing: a file named
+  `scripts/requirements-dev.txt` or `dev-requirements.txt` is not read at
+  all ("language-specific files num=0"), so the dev file must be named
+  `requirements.txt`. Pillow, Django, nltk and GitPython each produced 20 to
+  50 findings; pyarrow 14.0.0 and h11 0.14.0 each produced exactly one
+  critical. pyarrow was chosen. Re-probe before the panel: new advisories
+  can add rows.
+- `make triage-queue` evidence on this branch: Semgrep `avoid-pyyaml-load`
+  (ERROR), Trivy CVE-2020-14343 (CRITICAL, ships) and CVE-2023-47248
+  (CRITICAL, never ships), policy-test `support_agent_reads_only_orders`
+  failing on PR #1's branch, and the kubelet observation of 2026-10-30, read
+  from `docs/observations.json` and labelled as not collected again. That
+  "the kubelet requires authentication" is recorded as a statement in
+  STATUS.md, not as a probe result, and the evidence says so.
+
+### Rehearsal (glm-5.3-flash, high)
+
+- Runs 1 to 3, first instructions: all usable. Code flaw 1st and pyarrow last
+  in 3 of 3; access drift 2nd in 2 of 3. Run 1 ranked the PyYAML CVE 2nd and
+  said the upgrade "fixes the sink finding with it", which is wrong: the pin
+  does not remove `Loader=yaml.Loader`. The droid now says rule 4 turns on
+  whether the code calls the advisory's function, and that an upgrade never
+  fixes a code finding that names an unsafe API.
+- Runs 4 to 8, current instructions: all usable. Code flaw 1st, PyYAML 4th and
+  pyarrow last in 5 of 5; the exact order code, access drift, kubelet, PyYAML,
+  pyarrow in 4 of 5 (run 6 put the kubelet 2nd). 52 to 70 s end to end, the
+  model 17 to 27 s and 703 to 1,317 credits. Run 5 cited `server.py:80` for
+  the `yaml.load` call, which is in `scenario_import.py:11`.
+- `make check`: 169 tests and the repository contracts pass after
+  `make install` (the branch pins PyYAML 5.3.1 into `.venv`).
+
+### Not done
+
+- Not pushed, not in the pipeline; the per-PR packets are unchanged. The
+  worktree is not yet trusted in interactive Droid.
+
 ## 2026-11-26 — Code owners and the push (0.8.2)
 
 ### Done

@@ -3,6 +3,22 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.8.6 — 2026-11-26 (demo/triage-queue only)
+
+### Added
+
+- `make triage-queue` (`scripts/triage_queue.py`): every open signal in one
+  ranked list. Sources: this tree's pinned scanners, the capability-intent
+  test on each other branch that changes a workload role's policy, and the
+  recorded live observations in `docs/observations.json`. Per finding it
+  computes whether the file ships in the image, what imports it, which role
+  the workload runs as and whether the branch is merged. The model named in
+  `.factory/droids/triage-queue.md` ranks and gives one reason each; the
+  severity from the source is printed beside the rank unchanged. An
+  unusable answer leaves the queue in source order, marked unranked.
+- 13 unit tests (169 on this branch) and a repository contract for the
+  queue droid.
+
 ## 0.8.2 — 2026-11-26
 
 ### Added

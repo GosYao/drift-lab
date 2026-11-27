@@ -405,13 +405,13 @@ def fail_safe(evidence, finding):
         number, finding["scanner"], finding["rule"], UNAVAILABLE, finding["severity"])
 
 
-def model_line(run):
-    named = "`{}`, named in `{}`".format(run["requested"], DROID_FILE)
+def model_line(run, droid_file=DROID_FILE):
+    named = "`{}`, named in `{}`".format(run["requested"], droid_file)
     if "overrides" in run:
         named = "`{}`, set on the command line or by TRIAGE_MODEL".format(run["requested"])
         if run["overrides"]:
             named += " in place of the `{}` named in `{}`".format(run["overrides"],
-                                                                 DROID_FILE)
+                                                                 droid_file)
     if not run["ok"]:
         return "**Triage model:** {}. It did not produce a usable result: {}.".format(
             named, run["error"] or "see above")

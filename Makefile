@@ -4,7 +4,7 @@ PYTHON := $(if $(wildcard .venv/bin/python),.venv/bin/python,$(PYTHON))
 TERRAFORM ?= $(if $(wildcard .tools/terraform),.tools/terraform,terraform)
 
 .PHONY: preview test check install report preflight terraform-check policy-test \
-	scan triage verify-fix red-green demo-reset
+	scan triage triage-queue verify-fix red-green demo-reset
 
 preview:
 	$(PYTHON) -m drift_lab serve
@@ -62,6 +62,12 @@ scan:
 # reading of it (needs the droid CLI; read-only).
 triage:
 	$(PYTHON) scripts/triage.py
+
+# Every open signal in one ranked list: this tree's scanners, the policy test
+# on branches that change a role's policy, and recorded observations (needs
+# Docker, Terraform and the droid CLI; read-only).
+triage-queue:
+	$(PYTHON) scripts/triage_queue.py
 
 # The gates a security fix must pass: no new suppression, a regression test
 # that fails on the base, the unit suite, the policy test when infra changed,
