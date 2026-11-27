@@ -2,6 +2,23 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-11-27 — Manual fallback for the demo security queue (0.8.8)
+
+- Added `.github/workflows/security-queue.yml` (`workflow_dispatch` only) as a
+  fallback for the paused Factory Automation on the operator's Mac. The queue
+  code (`scripts/triage_queue.py`, `scripts/queue_issues.py`) lives on
+  `demo/triage-queue` (0.8.6 and 0.8.7); this file only runs it.
+- Credential split: the `rank` job holds only `FACTORY_API_KEY` and a
+  read-only checkout; the `publish` job holds only `GITHUB_TOKEN` with
+  `issues: write`, runs no model or scanner, and checks out only the publisher
+  at the commit the rank job ranked. The ref is fixed, not a dispatch input.
+- The Droid CLI is installed from npm at a pinned version (`@factory/cli@1.21.1`,
+  scripts ignored, version checked), so this file needs no curl-to-shell step
+  and no new Semgrep suppression.
+- Not yet run: `workflow_dispatch` runs only once the file is on `main`. The
+  first dispatch after the merge is the test. A runner has no publish ledger,
+  so do not dispatch within minutes of the Mac Automation or another dispatch.
+
 ## 2026-11-26 — First hosted run of the loop; the packet was not posted on red PRs (0.8.4)
 
 ### What went wrong

@@ -3,6 +3,15 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.8.8 — 2026-11-27
+
+### Added
+
+- `.github/workflows/security-queue.yml`: a manual (`workflow_dispatch`)
+  fallback that ranks the demo queue on `demo/triage-queue` and publishes it as
+  issues. Ranking (Factory key only) and publishing (issue write only) run in
+  separate jobs. Not yet run; it can only be dispatched from `main`.
+
 ## 0.8.4 — 2026-11-26
 
 ### Fixed
