@@ -29,6 +29,10 @@ updates open issues, preserves unrelated labels and comments, leaves closed
 issues closed, and does nothing to findings missing from a later queue.
 It never interprets absence as proof of a fix. Duplicate markers fail closed.
 
+GitHub's issue list can lag a few seconds behind a create. The publisher
+records each issue it creates in `.triage/issues-ledger.json` and reads those
+issues by number, so a rerun from the same checkout does not duplicate them.
+
 Run publishers serially. A checkout-local lock prevents overlapping local
 publishes; it is not a distributed lock. The GitHub fallback has its own
 concurrency group. Do not run that fallback and the Mac Automation together.

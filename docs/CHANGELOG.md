@@ -12,13 +12,16 @@ number tracks prototype milestones, not releases to users.
 - `make queue-issues`: an explicit, idempotent publisher to `GosYao/drift-lab`,
   with stable issue markers and urgency labels. It preserves unrelated labels
   and comments and never closes or reopens issues. Preview is the script default.
-- 13 publisher/output tests (182 total) covering reruns, partial publishing,
+- 13 publisher/output tests covering reruns, partial publishing,
   closed and missing findings, duplicate markers and unusable model output.
 - `docs/QUEUE.md` records entry points and the demo integration's boundaries.
 
 ### Fixed
 
 - An empty queue now composes successfully in both output formats.
+- A rerun right after publishing duplicated issues because GitHub's issue list
+  lagged. A local ledger of created issues, read by number, now prevents that
+  (2 more tests, 184 total).
 
 ## 0.8.6 — 2026-11-26 (demo/triage-queue only)
 

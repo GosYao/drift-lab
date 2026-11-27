@@ -18,6 +18,19 @@ Running record of what was done, decided, and deliberately not done. Newest firs
   the upgrade clears the dependency advisory; it does not replace the unsafe
   API. Nothing was published. Instructions now distinguish those facts and ask
   for the finding's own location, not its importer's location.
+- Live publish (`cc6911e`): issues #5 to #9 were created in rank order. The
+  immediate rerun left #5 and #6 unchanged but created #10 to #12 for the
+  last three findings. GitHub's issue list had not yet returned #7 to #9.
+  The publisher now records each issue's number in
+  `.triage/issues-ledger.json` right after it creates the issue, and reads a
+  recorded issue by number before creating another. Reading an issue by number
+  does not lag. #10 to #12 were retitled, had their markers removed, and were
+  closed as not planned with a pointer to the original. Two later reruns
+  reported five unchanged and made no writes. A second host without the local
+  ledger still depends on the list, so the publishers run one at a time, never
+  together and never within minutes of each other.
+- Issue #5 (code flaw, fix now) references fix PR #3 in a comment. It is not a
+  closing keyword, so the issue stays open until a person closes it.
 - `demo/triage-queue` is pushed and trusted (the earlier 0.8.6 “local only” and
   “not trusted” notes describe the state before that later step).
 

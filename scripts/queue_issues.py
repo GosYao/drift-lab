@@ -83,7 +83,9 @@ def api(path, method="GET", payload=None, paginate=False):
     return json.loads(done.stdout)
 
 
-def publish(queue, call=api, write=False):
+def publish(queue, call=api, write=False, ledger=None, save=lambda ledger: None):
+    """ledger maps finding id to issue number; it covers the list endpoint's lag."""
+    ledger = {} if ledger is None else ledger
     validate(queue)
     desired = [(row, "[Security queue] " + row["title"][:180], issue_body(queue, row))
                for row in queue["findings"]]
@@ -98,6 +100,13 @@ def publish(queue, call=api, write=False):
         for identity in MARKER.findall(issue.get("body") or ""):
             if identity in existing:
                 raise ValueError("duplicate issue markers; human review required")
+            existing[identity] = issue
+    # The list endpoint can omit an issue created seconds ago. A read by number does not.
+    for identity, number in sorted(ledger.items()):
+        if identity not in existing and identity in {row["id"] for row, _, _ in desired}:
+            issue = call(base + "/issues/" + str(number))
+            if identity not in MARKER.findall(issue.get("body") or ""):
+                raise ValueError("issue #{} lost its marker; human review required".format(number))
             existing[identity] = issue
     labels = {item["name"] for page in call(base + "/labels?per_page=100", paginate=True)
               for item in page}
@@ -121,6 +130,9 @@ def publish(queue, call=api, write=False):
             path = base + "/issues" + ("/" + str(issue["number"]) if issue else "")
             issue = call(path, method="PATCH" if issue else "POST", payload=payload)
             action = "updated" if row["id"] in existing else "created"
+            if action == "created":
+                ledger[row["id"]] = issue["number"]
+                save(ledger)
         result.append({"action": action, "url": issue["html_url"], "id": row["id"]})
     return result
 
@@ -129,12 +141,17 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--queue", type=Path, default=ROOT / ".triage/queue.json")
     parser.add_argument("--publish", action="store_true", help="authorize GitHub issue writes")
+    parser.add_argument("--ledger", type=Path, default=ROOT / ".triage/issues-ledger.json")
     args = parser.parse_args(argv)
+    ledger = json.loads(args.ledger.read_text()) if args.ledger.is_file() else {}
+
+    def save(current):
+        args.ledger.write_text(json.dumps(current, indent=2, sort_keys=True) + "\n")
     # Serialize publishers sharing this checkout. Cross-host calls must also be serialized.
     with args.queue.with_suffix(".publish.lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         queue = json.loads(args.queue.read_text())
-        print(json.dumps(publish(queue, write=args.publish), indent=2))
+        print(json.dumps(publish(queue, write=args.publish, ledger=ledger, save=save), indent=2))
     return 0
 
 

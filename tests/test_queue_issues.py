@@ -22,11 +22,15 @@ def queue():
 
 class GitHub:
     def __init__(self):
-        self.issues, self.labels, self.writes = [], {}, []
+        self.issues, self.labels, self.writes, self.listed = [], {}, [], None
 
     def __call__(self, path, method="GET", payload=None, paginate=False):
+        if method == "GET" and "/issues/" in path:
+            return copy.deepcopy(next(item for item in self.issues
+                                      if str(item["number"]) == path.rsplit("/", 1)[-1]))
         if method == "GET":
-            return [copy.deepcopy(self.issues if "/issues?" in path else
+            visible = self.issues if self.listed is None else self.issues[:self.listed]
+            return [copy.deepcopy(visible if "/issues?" in path else
                                   [{"name": name} for name in self.labels])]
         self.writes.append((method, path, payload))
         if path.endswith("/labels"):
@@ -169,6 +173,27 @@ class PublisherTests(unittest.TestCase):
         result = queue_issues.publish(self.data, call=self.api, write=True)
         self.assertEqual([row["action"] for row in result], ["unchanged", "created", "created"])
         self.assertEqual(len(self.api.issues), 3)
+
+    def test_a_lagging_issue_list_does_not_cause_duplicates(self):
+        ledger = {}
+        queue_issues.publish(self.data, call=self.api, write=True, ledger=ledger)
+        self.assertEqual(sorted(ledger.values()), [1, 2, 3])
+        self.api.listed = 1
+        self.api.writes.clear()
+        result = queue_issues.publish(self.data, call=self.api, write=True, ledger=ledger)
+        self.assertEqual([row["action"] for row in result], ["unchanged"] * 3)
+        self.assertEqual(self.api.writes, [])
+        self.assertEqual(len(self.api.issues), 3)
+
+    def test_a_ledger_entry_whose_issue_lost_its_marker_fails_before_writes(self):
+        ledger = {}
+        queue_issues.publish(self.data, call=self.api, write=True, ledger=ledger)
+        self.api.issues[2]["body"] = "edited by a person"
+        self.api.listed = 0
+        self.api.writes.clear()
+        with self.assertRaises(ValueError):
+            queue_issues.publish(self.data, call=self.api, write=True, ledger=ledger)
+        self.assertEqual(self.api.writes, [])
 
     def test_source_and_recorded_facts_are_visible_without_raw_outputs(self):
         self.data["findings"][0]["facts"] = ["Recorded 2026-10-30, not collected again."]
