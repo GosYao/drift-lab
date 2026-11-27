@@ -4,6 +4,8 @@ ARG PYTHON_IMAGE=python:3.12-slim
 FROM ${PYTHON_IMAGE}
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY drift_lab /app/drift_lab
 USER 10001:10001
 EXPOSE 8765
