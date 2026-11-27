@@ -3,6 +3,15 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.8.4 — 2026-11-26
+
+### Fixed
+
+- The review packet is posted on a pull request whose gates failed. The
+  posting job inherited the failure of the gates upstream of the review and
+  was skipped, so PR #1 and PR #2 got no packet on their first hosted run.
+  `scripts/check_repository.py` now fails if that condition is removed.
+
 ## 0.8.2 — 2026-11-26
 
 ### Added

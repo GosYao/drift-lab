@@ -62,6 +62,13 @@ if 'git archive "origin/$DEFAULT_BRANCH"' not in workflow:
     raise SystemExit("The verify-fix job must take the verifier and the scanner "
                      "definition from the default branch.")
 
+# The review exists to explain failed gates, so its post must not be skipped
+# when one fails.
+post = re.search(r"^  post-review:\n((?:    .*\n|\n)+)", workflow, re.M)
+if not post or "always() && needs.droid-review.result == 'success'" not in post.group(1):
+    raise SystemExit("The post-review job must run when a gate failed, as long as "
+                     "the review itself succeeded.")
+
 # The judge, the rules and the tests are reviewed by someone other than the
 # author: each needs a code owner.
 owners_file = ROOT / ".github/CODEOWNERS"

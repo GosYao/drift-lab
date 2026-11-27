@@ -252,6 +252,9 @@ jobs:
   post-review:
     name: post droid review
     needs: droid-review
+    # A failed gate upstream of the review would otherwise skip this job, and
+    # the packet that explains the failure would never be posted.
+    if: always() && needs.droid-review.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
