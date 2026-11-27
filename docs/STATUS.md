@@ -73,7 +73,11 @@ Phase 1 is **not complete** against its exit criteria. Not yet done:
   policy test, PR #3 (the fix, into PR #2's branch) is green with
   `verify-fix` VERIFIED, and each has its review packet posted (0.8.4).
   Rulesets on `main` and `feature/**` require the checks and a code-owner
-  approval, with no bypass. The GitHub panel in the UI remains a fixture
+  approval, with no bypass (verified via effective branch rules; PR #3 is
+  BLOCKED with REVIEW_REQUIRED despite green checks). The verify-fix check
+  is required but skips non-fix branches. Both worktrees are trusted and
+  the interactive CLI Stop hook is proven. The labelled fix recording and
+  second-account approval demo remain. The GitHub panel in the UI remains a fixture
   preview.
 - **Real agent egress is blocked by design.** Pod Identity credentials, DNS, and
   DynamoDB need a reviewed egress allow-list before a real agent replaces the

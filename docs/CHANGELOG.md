@@ -3,6 +3,17 @@
 Notable changes to this project. The format follows Keep a Changelog; the version
 number tracks prototype milestones, not releases to users.
 
+## 0.8.5 — 2026-11-26
+
+### Changed
+
+- Active GitHub rulesets on `main` and `feature/**` require one approval,
+  code-owner review and the deterministic checks, including verify-fix for
+  fix branches. No bypass, force push or deletion. Record updates now need
+  a pull request too.
+- The panel plan records hosted gate results and the proven interactive
+  CLI hook, rather than planned pushes and local-only controls.
+
 ## 0.8.4 — 2026-11-26
 
 ### Fixed

@@ -2,6 +2,40 @@
 
 Running record of what was done, decided, and deliberately not done. Newest first.
 
+## 2026-11-26 — No-bypass protections and interactive trust (0.8.5)
+
+### Done
+
+- With the user's authorization, created active rulesets for `main` and
+  `feature/**`: one approval and code-owner review, required make check,
+  terraform-check + policy-test, Semgrep, Trivy and verify-fix, up-to-date
+  branch, no force push or deletion and no bypass. Check sources are pinned
+  to GitHub Actions (app 15368). GitHub accepts the skipped verify-fix job
+  on non-fix branches; fix branches must pass it.
+- Verified each scope's effective branch rules. The ruleset API reports
+  `current_user_can_bypass: never`. PR #3 has green checks but is BLOCKED,
+  REVIEW_REQUIRED, with `garymax-cloud` requested as reviewer.
+- Rulesets: [main](https://github.com/GosYao/drift-lab/rules/28202722),
+  [feature branches](https://github.com/GosYao/drift-lab/rules/28202723).
+  Neither seeded PR was merged. No direct push to main was attempted.
+- Both worktrees were trusted interactively; `/hooks` and `/droids`
+  showed the project hook and the fix and triage droids. The interactive
+  Stop hook printed VERIFIED in `fix-yaml` and stayed quiet in
+  `feature-yaml`. No screenshot or video was saved.
+- Panel plan v3.4 records the hosted results, current hashes and controls.
+  The plan stays in ignored `outputs/`, not in the public repository.
+- `make check` passed: 150 tests, compilation and repository contracts.
+  The triage timeout tests emitted unclosed-file ResourceWarnings; they
+  passed, and this documentation change does not repair those warnings.
+
+### Still needed
+
+- Record and cut the labelled fix excerpt, rehearse the full run, and have
+  the code owner independently review for the approval demo. The author
+  cannot approve. Record updates now require a PR; do not bypass the rules.
+- The stronger organization-owned immutable workflow is still proposed,
+  not configured. Branch-name-based verify-fix is not a security classifier.
+
 ## 2026-11-26 — First hosted run of the loop; the packet was not posted on red PRs (0.8.4)
 
 ### What went wrong
