@@ -1,0 +1,6 @@
+# Developer-only analysis tools. Never copied into the image or installed by
+# the Dockerfile; the pipeline does not install it either.
+#
+# SEEDED FOR THE TRIAGE-QUEUE DEMO: pyarrow 14.0.0 carries CVE-2023-47248
+# (critical, fixed in 14.0.1). Do not install this file and do not merge it.
+pyarrow==14.0.0
