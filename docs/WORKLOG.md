@@ -12,7 +12,6 @@ Running record of what was done, decided, and deliberately not done. Newest firs
   Stable identity ignores rank, commit, line and installed version, but retains
   file and policy branch. No source severity changes.
 - `make check`: 182 tests pass, compilation and repository contracts pass.
-  Live publishing and Automation validation are still pending at this entry.
 - First integration ranking had the intended order but said a PyYAML upgrade
   fixes neither the advisory path nor the code finding. The first half is wrong:
   the upgrade clears the dependency advisory; it does not replace the unsafe
@@ -29,6 +28,21 @@ Running record of what was done, decided, and deliberately not done. Newest firs
   reported five unchanged and made no writes. A second host without the local
   ledger still depends on the list, so the publishers run one at a time, never
   together and never within minutes of each other.
+- Factory Automation `drift-lab security queue (demo)`
+  (`f52f51c7-6431-42e8-9c85-aee1ed7376c3`): cloud automation, paused, yearly
+  placeholder schedule, targeting the registered Mac `ot-gyao-mac`, Haiku 5.5
+  at low effort. Its prompt runs `make triage-queue`, then `make queue-issues`
+  only if ranking exited 0, and forbids edits, commits and issue state
+  changes. "Run now" at `5d0bb6d`: ranking exited 0, with the same order as
+  the rehearsals (code flaw, access drift, kubelet, PyYAML, pyarrow), and the
+  publisher updated #5 to #9 in place with no duplicates. The comment
+  linking PR #3 on #5 stayed. Two caveats. The run took about 26 minutes,
+  not about 1: the Mac slept, a parallel `make scan` competed for Docker, and
+  the load average was 11.6. The first command was also killed by the
+  default 60-second command timeout, so the prompt now sets the timeouts.
+  The run session starts with `--skip-permissions-unsafe`, so the prompt's
+  rules are instructions, not enforcement. Enforcement is the
+  `gh` token's scope and the publisher's code.
 - Issue #5 (code flaw, fix now) references fix PR #3 in a comment. It is not a
   closing keyword, so the issue stays open until a person closes it.
 - `demo/triage-queue` is pushed and trusted (the earlier 0.8.6 “local only” and
